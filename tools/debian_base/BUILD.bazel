@@ -37,6 +37,7 @@ container_image(
         "@debian_deb_libtinfo5//file",
         "@debian_deb_linux_libc_dev//file",
         "@debian_deb_perl_base//file",
+        "@debian_deb_perl_modules_base//file",
         "@debian_deb_python27_minimal//file",
         "@debian_deb_python_minimal//file",
         "@debian_deb_sed//file",
