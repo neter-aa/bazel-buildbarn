@@ -214,6 +214,12 @@ http_file(
 )
 
 http_file(
+    name = "debian_deb_perl_base",
+    sha256 = "914985af488a14268b911de8b06e082165f362e3d3c6a52581aa2619d557e1ea",
+    url = "http://ftp.nl.debian.org/debian/pool/main/p/perl/perl-base_5.24.1-3+deb9u4_amd64.deb",
+)
+
+http_file(
     name = "debian_deb_python27_minimal",
     sha256 = "6f9769d212e1953432e101f0e5874182624204cfa61a8b322320b2c1d726193e",
     url = "http://ftp.nl.debian.org/debian/pool/main/p/python2.7/python2.7-minimal_2.7.13-2+deb9u2_amd64.deb",
