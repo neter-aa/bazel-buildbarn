@@ -9,12 +9,14 @@ import (
 )
 
 type actionCacheServer struct {
-	actionCache ActionCache
+	actionCache  ActionCache
+	allowUpdates bool
 }
 
-func NewActionCacheServer(actionCache ActionCache) remoteexecution.ActionCacheServer {
+func NewActionCacheServer(actionCache ActionCache, allowUpdates bool) remoteexecution.ActionCacheServer {
 	return &actionCacheServer{
-		actionCache: actionCache,
+		actionCache:  actionCache,
+		allowUpdates: allowUpdates,
 	}
 }
 
@@ -23,5 +25,8 @@ func (s *actionCacheServer) GetActionResult(ctx context.Context, in *remoteexecu
 }
 
 func (s *actionCacheServer) UpdateActionResult(ctx context.Context, in *remoteexecution.UpdateActionResultRequest) (*remoteexecution.ActionResult, error) {
-	return nil, status.Error(codes.PermissionDenied, "This service can only be used to get action results")
+	if !s.allowUpdates {
+		return nil, status.Error(codes.Unimplemented, "This service can only be used to get action results")
+	}
+	return in.ActionResult, s.actionCache.PutActionResult(ctx, in.InstanceName, in.ActionDigest, in.ActionResult)
 }
