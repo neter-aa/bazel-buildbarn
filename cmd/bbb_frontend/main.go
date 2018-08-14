@@ -42,6 +42,8 @@ func (i *stringList) Set(value string) error {
 func main() {
 	var schedulersList stringList
 	var (
+		actionCacheAllowUpdates = flag.Bool("ac-allow-updates", false, "Allow clients to write into the action cache")
+
 		redisEndpoint = flag.String("redis-endpoint", "", "Redis endpoint for the Content Addressable Storage and the Action Cache")
 
 		s3Endpoint        = flag.String("s3-endpoint", "", "S3 compatible object storage endpoint for the Content Addressable Storage and the Action Cache")
@@ -147,7 +149,7 @@ func main() {
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
-	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache))
+	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache, *actionCacheAllowUpdates))
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
 	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess))
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
