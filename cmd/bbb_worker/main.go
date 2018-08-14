@@ -30,12 +30,15 @@ import (
 
 func main() {
 	var (
-		redisEndpoint     = flag.String("redis-endpoint", "", "Redis endpoint for the Content Addressable Storage and the Action Cache")
+		redisEndpoint = flag.String("redis-endpoint", "", "Redis endpoint for the Content Addressable Storage and the Action Cache")
+
 		s3Endpoint        = flag.String("s3-endpoint", "", "S3 compatible object storage endpoint for the Content Addressable Storage and the Action Cache")
 		s3AccessKeyId     = flag.String("s3-access-key-id", "", "Access key for the object storage")
 		s3SecretAccessKey = flag.String("s3-secret-access-key", "", "Secret key for the object storage")
 		s3Region          = flag.String("s3-region", "", "Region of the object storage")
 		s3DisableSsl      = flag.Bool("s3-disable-ssl", false, "Whether to use HTTP for the object storage instead of HTTPS")
+
+		remoteCache = flag.String("remote", "", "The address of the remote HTTP cache")
 
 		schedulerAddress = flag.String("scheduler", "", "Address of the scheduler to which to connect")
 	)
@@ -63,37 +66,53 @@ func main() {
 	uploader := s3manager.NewUploader(session)
 	uploader.Concurrency = 1
 
+	var casBlobAccess blobstore.BlobAccess
+	var actionCacheBlobAccess blobstore.BlobAccess
+
+	if *remoteCache == "" {
+
+		casBlobAccess = blobstore.NewSizeDistinguishingBlobAccess(
+			blobstore.NewMetricsBlobAccess(
+				blobstore.NewRedisBlobAccess(
+					redis.NewClient(
+						&redis.Options{
+							Addr: *redisEndpoint,
+							DB:   0,
+						}),
+					util.KeyDigestWithoutInstance),
+				"cas_redis"),
+			blobstore.NewMetricsBlobAccess(
+				blobstore.NewS3BlobAccess(
+					s3,
+					uploader,
+					aws.String("content-addressable-storage"),
+					util.KeyDigestWithoutInstance),
+				"cas_s3"),
+			1<<20)
+
+		actionCacheBlobAccess = blobstore.NewMetricsBlobAccess(
+			blobstore.NewRedisBlobAccess(
+				redis.NewClient(
+					&redis.Options{
+						Addr: *redisEndpoint,
+						DB:   1,
+					}),
+				util.KeyDigestWithInstance),
+			"ac_redis")
+	} else {
+		casBlobAccess = blobstore.NewMetricsBlobAccess(
+			blobstore.NewRemoteBlobAccess(*remoteCache, "cas"),
+			"cas_remote")
+		actionCacheBlobAccess = blobstore.NewMetricsBlobAccess(
+			blobstore.NewRemoteBlobAccess(*remoteCache, "ac"),
+			"ac_remote")
+	}
+
 	// Storage of content and actions.
 	contentAddressableStorageBlobAccess := blobstore.NewMetricsBlobAccess(
 		blobstore.NewMerkleBlobAccess(
-			blobstore.NewSizeDistinguishingBlobAccess(
-				blobstore.NewMetricsBlobAccess(
-					blobstore.NewRedisBlobAccess(
-						redis.NewClient(
-							&redis.Options{
-								Addr: *redisEndpoint,
-								DB:   0,
-							}),
-						util.KeyDigestWithoutInstance),
-					"cas_redis"),
-				blobstore.NewMetricsBlobAccess(
-					blobstore.NewS3BlobAccess(
-						s3,
-						uploader,
-						aws.String("content-addressable-storage"),
-						util.KeyDigestWithoutInstance),
-					"cas_s3"),
-				1<<20)),
+			casBlobAccess),
 		"cas_merkle")
-	actionCacheBlobAccess := blobstore.NewMetricsBlobAccess(
-		blobstore.NewRedisBlobAccess(
-			redis.NewClient(
-				&redis.Options{
-					Addr: *redisEndpoint,
-					DB:   1,
-				}),
-			util.KeyDigestWithInstance),
-		"ac_redis")
 
 	// On-disk caching of content for efficient linking into build environments.
 	if err := os.Mkdir("/cache", 0); err != nil {
