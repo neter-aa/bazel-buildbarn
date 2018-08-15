@@ -18,10 +18,14 @@ It is also possible to start multiple `bbb_scheduler` processes if
 multiple build queues are desired (e.g., supporting multiple build
 operating systems).
 
-These processes use Redis to store most of their data (in terms of
-object count). As Redis is not well suited for storing large elements,
-an S3 bucket is used to hold any Content Addressable Storage objects
-exceeding 1 MiB in size.
+These processes depend on a central data store to cache their data.
+Several storage backends are supported: [Redis](https://redis.io/),
+[S3](https://aws.amazon.com/s3/) and [Bazel Remote](https://github.com/buchgr/bazel-remote/).
+Multiple backends can be used in a single deployment to combine their
+individual strengths. For example, Redis is efficient at storing small
+objects, whereas S3 is better suited for large objects. Bazel Buildbarn
+can be configured to partition objects in the Content Addressable
+Storage across backends by size.
 
 Below is a diagram of what a typical Bazel Buildbarn deployment may look
 like. In this diagram, the arrows represent the direction in which
@@ -45,10 +49,16 @@ TODO(edsch): Provide example Kubernetes configuration files.
 
 ## Using Bazel Buildbarn
 
-Bazel can make use of Bazel Buildbarn by invoking it as follows:
+Bazel can be configured to perform remote execution against Bazel Buildbarn by
+placing the following in `.bazelrc`:
 
-    bazel build \
-        --cpu=k8 --experimental_strict_action_env --genrule_strategy=remote \
-        --remote_executor=...:8980 --spawn_strategy=remote \
-        --strategy=Closure=remote --strategy=Javac=remote \
-        //...
+    build:bbb-debian9 --cpu=k8 --crosstool_top=@bazel_buildbarn//toolchain:debian9 --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian9 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
+
+In the configuration above, we assume that the container image for the
+worker based on Debian 9 is used. For this image, we depend on a C/C++
+compiler configuration for Debian 9 that is stored in this repository,
+meaning that you will need to add a `bazel_buildbarn` repository
+reference to your `WORKSPACE` file. Once added, you may perform remote
+builds against Bazel Buildbarn by running the command below:
+
+    bazel build --config=bbb-debian9 //...
