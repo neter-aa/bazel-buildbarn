@@ -45,7 +45,22 @@ as user `build`. Input files are only readable to the latter.
 
 ## Setting up Bazel Buildbarn
 
-TODO(edsch): Provide example Kubernetes configuration files.
+This repository contains publicly visible targets that build Docker
+container images for the individual components:
+
+    //cmd/bbb_worker:bbb_worker_container
+    //cmd/bbb_scheduler:bbb_scheduler_container
+    //cmd/bbb_frontend:bbb_frontend_container
+
+You can add this repository to an existing workspace and use
+[`container_push()`](https://github.com/bazelbuild/rules_docker#container_push-1)
+rules to push these three container images to a container registry of
+choice.
+
+The `kubernetes/` directory in this repository contains example YAML
+files that you may use to run Bazel Buildbarn on Kubernetes. Only YAML
+files for Bazel Buildbarn itself are provided. Instructions on how to
+set up dependencies, such as Redis and S3, are not included.
 
 ## Using Bazel Buildbarn
 
