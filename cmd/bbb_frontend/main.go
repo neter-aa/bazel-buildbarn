@@ -12,13 +12,6 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/go-redis/redis"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -43,16 +36,7 @@ func main() {
 	var schedulersList stringList
 	var (
 		actionCacheAllowUpdates = flag.Bool("ac-allow-updates", false, "Allow clients to write into the action cache")
-
-		redisEndpoint = flag.String("redis-endpoint", "", "Redis endpoint for the Content Addressable Storage and the Action Cache")
-
-		s3Endpoint        = flag.String("s3-endpoint", "", "S3 compatible object storage endpoint for the Content Addressable Storage and the Action Cache")
-		s3AccessKeyId     = flag.String("s3-access-key-id", "", "Access key for the object storage")
-		s3SecretAccessKey = flag.String("s3-secret-access-key", "", "Secret key for the object storage")
-		s3Region          = flag.String("s3-region", "", "Region of the object storage")
-		s3DisableSsl      = flag.Bool("s3-disable-ssl", false, "Whether to use HTTP for the object storage instead of HTTPS")
-
-		remoteCache = flag.String("remote", "", "The address of the remote HTTP cache")
+		blobstoreConfig         = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
 	)
 	flag.Var(&schedulersList, "scheduler", "Backend capable of executing build actions. Example: debian9|hostname-of-debian9-scheduler:8981")
 	flag.Parse()
@@ -63,66 +47,11 @@ func main() {
 		log.Fatal(http.ListenAndServe(":80", nil))
 	}()
 
-	// Create an S3 client. Set the uploader concurrency to 1 to drastically reduce memory usage.
-	// TODO(edsch): Maybe the concurrency can be left alone for this process?
-	session := session.New(&aws.Config{
-		Credentials:      credentials.NewStaticCredentials(*s3AccessKeyId, *s3SecretAccessKey, ""),
-		Endpoint:         s3Endpoint,
-		Region:           s3Region,
-		DisableSSL:       s3DisableSsl,
-		S3ForcePathStyle: aws.Bool(true),
-	})
-	s3 := s3.New(session)
-	uploader := s3manager.NewUploader(session)
-	uploader.Concurrency = 1
-
-	var casBlobAccess blobstore.BlobAccess
-	var actionCacheBlobAccess blobstore.BlobAccess
-
-	if *remoteCache == "" {
-
-		casBlobAccess = blobstore.NewSizeDistinguishingBlobAccess(
-			blobstore.NewMetricsBlobAccess(
-				blobstore.NewRedisBlobAccess(
-					redis.NewClient(
-						&redis.Options{
-							Addr: *redisEndpoint,
-							DB:   0,
-						}),
-					util.KeyDigestWithoutInstance),
-				"cas_redis"),
-			blobstore.NewMetricsBlobAccess(
-				blobstore.NewS3BlobAccess(
-					s3,
-					uploader,
-					aws.String("content-addressable-storage"),
-					util.KeyDigestWithoutInstance),
-				"cas_s3"),
-			1<<20)
-
-		actionCacheBlobAccess = blobstore.NewMetricsBlobAccess(
-			blobstore.NewRedisBlobAccess(
-				redis.NewClient(
-					&redis.Options{
-						Addr: *redisEndpoint,
-						DB:   1,
-					}),
-				util.KeyDigestWithInstance),
-			"ac_redis")
-	} else {
-		casBlobAccess = blobstore.NewMetricsBlobAccess(
-			blobstore.NewRemoteBlobAccess(*remoteCache, "cas"),
-			"cas_remote")
-		actionCacheBlobAccess = blobstore.NewMetricsBlobAccess(
-			blobstore.NewRemoteBlobAccess(*remoteCache, "ac"),
-			"ac_remote")
+	// Storage access.
+	contentAddressableStorageBlobAccess, actionCacheBlobAccess, err := blobstore.CreateBlobAccessObjectsFromConfig(*blobstoreConfig)
+	if err != nil {
+		log.Fatal("Failed to create blob access: ", err)
 	}
-
-	// Storage of content and actions.
-	contentAddressableStorageBlobAccess := blobstore.NewMetricsBlobAccess(
-		blobstore.NewMerkleBlobAccess(casBlobAccess),
-		"cas_merkle")
-
 	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
 
 	// Backends capable of compiling.

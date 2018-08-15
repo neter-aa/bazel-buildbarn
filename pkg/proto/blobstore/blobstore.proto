@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package buildbarn.blobstore;
+
+option go_package = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore";
+
+// Storage configuration for Bazel Buildbarn.
+message BlobstoreConfiguration {
+    // Storage configuration for the Content Addressable Storage (CAS).
+    BlobAccessConfiguration content_addressable_storage = 1;
+
+    // Storage configuration for the Action Cache (AC).
+    BlobAccessConfiguration action_cache = 2;
+}
+
+message BlobAccessConfiguration {
+    oneof backend {
+        // Read objects from/write objects to a Redis server.
+        RedisBlobAccessConfiguration redis = 2;
+
+        // Read objects from/write objects to a Bazel remote build cache server.
+        RemoteBlobAccessConfiguration remote = 3;
+
+        // Read objects from/write objects to an S3 bucket.
+        S3BlobAccessConfiguration s3 = 4;
+
+        // Split up objects across two storage backends by digest size.
+        SizeDistinguishingeBlobAccessConfiguration size_distinguishing = 5;
+    }
+}
+
+message RedisBlobAccessConfiguration {
+    // Endpoint address of the Redis server (e.g., "localhost:6379").
+    string endpoint = 1;
+
+    // Numerical ID of the database.
+    int32 db = 2;
+}
+
+message RemoteBlobAccessConfiguration {
+    // URL of the remote build cache (e.g., "http://localhost:8080/").
+    string address = 1;
+}
+
+message S3BlobAccessConfiguration {
+    // URL of the S3 bucket (e.g., "http://localhost:9000" when using Minio).
+    string endpoint = 1;
+
+    // AWS Access Key ID.
+    string access_key_id = 2;
+
+    // AWS Secret Access Key.
+    string secret_access_key = 3;
+
+    // AWS region (e.g., "eu-west-1").
+    string region = 4;
+
+    // Whether SSL should be disabled.
+    bool disable_ssl = 5;
+
+    // Name of the S3 bucket.
+    string bucket = 6;
+}
+
+message SizeDistinguishingeBlobAccessConfiguration {
+    // Backend to which to send requests for small blobs (e.g., Redis).
+    BlobAccessConfiguration small = 1;
+
+    // Backend to which to send requests for small blobs (e.g., S3).
+    BlobAccessConfiguration large = 2;
+
+    // Maximum size of blobs read from/written to the backend for small blobs.
+    int64 cutoff_size_bytes = 3;
+}
