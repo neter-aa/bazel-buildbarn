@@ -42,7 +42,7 @@ func (ba *remoteBlobAccess) Get(ctx context.Context, instance string, digest *re
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:
-		return &errorReader{err: status.Errorf(codes.NotFound, url)}
+		return &errorReader{err: status.Error(codes.NotFound, url)}
 	case http.StatusOK:
 		return resp.Body
 	default:
