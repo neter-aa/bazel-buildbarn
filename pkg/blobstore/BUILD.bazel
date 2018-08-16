@@ -6,6 +6,7 @@ go_library(
         "blob_access.go",
         "byte_stream_server.go",
         "create_blob_access.go",
+        "existence_precondition_blob_access.go",
         "merkle_blob_access.go",
         "metrics_blob_access.go",
         "redis_blob_access.go",

@@ -65,7 +65,6 @@ func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, ins
 	}
 	defer w.Close()
 
-	// TODO(edsch): Translate NOT_FOUND to INVALID_PRECONDITION?
 	r := cas.blobAccess.Get(ctx, instance, digest)
 	_, err = io.Copy(w, r)
 	r.Close()

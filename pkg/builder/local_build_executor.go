@@ -65,7 +65,6 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, instance
 		return err
 	}
 
-	// TODO(edsch): Translate NOT_FOUND to INVALID_PRECONDITION?
 	directory, err := be.contentAddressableStorage.GetDirectory(ctx, instance, digest)
 	if err != nil {
 		return err
@@ -117,7 +116,6 @@ func (be *localBuildExecutor) prepareFilesystem(ctx context.Context, request *re
 
 func (be *localBuildExecutor) runCommand(ctx context.Context, request *remoteexecution.ExecuteRequest) error {
 	// Fetch command.
-	// TODO(edsch): Translate NOT_FOUND to INVALID_PRECONDITION?
 	command, err := be.contentAddressableStorage.GetCommand(ctx, request.InstanceName, request.Action.CommandDigest)
 	if err != nil {
 		return err

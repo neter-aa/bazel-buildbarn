@@ -54,7 +54,8 @@ func main() {
 			cas.NewDirectoryCachingContentAddressableStorage(
 				cas.NewHardlinkingContentAddressableStorage(
 					cas.NewBlobAccessContentAddressableStorage(
-						contentAddressableStorageBlobAccess),
+						blobstore.NewExistencePreconditionBlobAccess(
+							contentAddressableStorageBlobAccess)),
 					util.KeyDigestWithoutInstance, "/cache", 10000, 1<<30),
 				util.KeyDigestWithoutInstance, 1000)),
 		ac.NewBlobAccessActionCache(
