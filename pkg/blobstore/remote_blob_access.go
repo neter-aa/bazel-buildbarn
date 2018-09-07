@@ -6,9 +6,10 @@ import (
 	"io"
 	"net/http"
 
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+
 	"golang.org/x/net/context/ctxhttp"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

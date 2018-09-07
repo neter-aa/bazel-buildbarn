@@ -3,10 +3,11 @@ package cas
 import (
 	"context"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 type ContentAddressableStorage interface {
+	GetAction(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Action, error)
 	GetCommand(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Command, error)
 	GetDirectory(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Directory, error)
 	GetFile(ctx context.Context, instance string, digest *remoteexecution.Digest, outputPath string, isExecutable bool) error

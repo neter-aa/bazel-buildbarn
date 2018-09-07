@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,10 +32,14 @@ func (s *contentAddressableStorageServer) FindMissingBlobs(ctx context.Context, 
 	}, nil
 }
 
+func (s *contentAddressableStorageServer) BatchReadBlobs(ctx context.Context, in *remoteexecution.BatchReadBlobsRequest) (*remoteexecution.BatchReadBlobsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "This service does not support batched reading of blobs")
+}
+
 func (s *contentAddressableStorageServer) BatchUpdateBlobs(ctx context.Context, in *remoteexecution.BatchUpdateBlobsRequest) (*remoteexecution.BatchUpdateBlobsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "This service does not support batched uploading of blobs")
 }
 
-func (s *contentAddressableStorageServer) GetTree(ctx context.Context, in *remoteexecution.GetTreeRequest) (*remoteexecution.GetTreeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "This service does not support downloading directory trees")
+func (s *contentAddressableStorageServer) GetTree(in *remoteexecution.GetTreeRequest, stream remoteexecution.ContentAddressableStorage_GetTreeServer) error {
+	return status.Error(codes.Unimplemented, "This service does not support downloading directory trees")
 }

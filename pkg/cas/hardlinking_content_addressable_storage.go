@@ -7,8 +7,7 @@ import (
 	"path"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
-
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 type hardlinkingContentAddressableStorage struct {

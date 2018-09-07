@@ -12,12 +12,11 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/genproto/googleapis/bytestream"
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
-	watcher "google.golang.org/genproto/googleapis/watcher/v1"
 	"google.golang.org/grpc"
 )
 
@@ -55,7 +54,7 @@ func main() {
 	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
 
 	// Backends capable of compiling.
-	schedulers := map[string]builder.BuildQueue{}
+	schedulers := map[string]remoteexecution.ExecutionServer{}
 	for _, schedulerEntry := range schedulersList {
 		components := strings.SplitN(schedulerEntry, "|", 2)
 		if len(components) != 2 {
@@ -82,7 +81,6 @@ func main() {
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
 	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess))
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
-	watcher.RegisterWatcherServer(s, buildQueue)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s)
 

@@ -1,47 +1,50 @@
 package builder
 
 import (
-	"context"
 	"io"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
-	"google.golang.org/genproto/googleapis/longrunning"
-	watcher "google.golang.org/genproto/googleapis/watcher/v1"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+
 	"google.golang.org/grpc"
 )
 
 type forwardingBuildQueue struct {
-	executionClient remoteexecution.ExecutionClient
-	watcherClient   watcher.WatcherClient
+	client remoteexecution.ExecutionClient
 }
 
-func NewForwardingBuildQueue(client *grpc.ClientConn) BuildQueue {
+func NewForwardingBuildQueue(client *grpc.ClientConn) remoteexecution.ExecutionServer {
 	return &forwardingBuildQueue{
-		executionClient: remoteexecution.NewExecutionClient(client),
-		watcherClient:   watcher.NewWatcherClient(client),
+		client: remoteexecution.NewExecutionClient(client),
 	}
 }
 
-func (bq *forwardingBuildQueue) Execute(ctx context.Context, request *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
-	return bq.executionClient.Execute(ctx, request)
-}
-
-func (bq *forwardingBuildQueue) Watch(in *watcher.Request, out watcher.Watcher_WatchServer) error {
-	client, err := bq.watcherClient.Watch(out.Context(), in)
-	if err != nil {
-		return err
-	}
+func forwardOperations(client remoteexecution.Execution_ExecuteClient, server remoteexecution.Execution_ExecuteServer) error {
 	for {
-		changeBatch, err := client.Recv()
+		operation, err := client.Recv()
 		if err != nil {
 			if err == io.EOF {
 				return nil
 			}
 			return err
 		}
-
-		if err := out.Send(changeBatch); err != nil {
+		if err := server.Send(operation); err != nil {
 			return err
 		}
 	}
+}
+
+func (bq *forwardingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
+	client, err := bq.client.Execute(out.Context(), in)
+	if err != nil {
+		return err
+	}
+	return forwardOperations(client, out)
+}
+
+func (bq *forwardingBuildQueue) WaitExecution(in *remoteexecution.WaitExecutionRequest, out remoteexecution.Execution_WaitExecutionServer) error {
+	client, err := bq.client.WaitExecution(out.Context(), in)
+	if err != nil {
+		return err
+	}
+	return forwardOperations(client, out)
 }

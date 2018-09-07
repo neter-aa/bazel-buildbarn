@@ -3,7 +3,8 @@ package ac
 import (
 	"context"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

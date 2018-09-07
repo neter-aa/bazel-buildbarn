@@ -93,7 +93,7 @@ func subscribeAndExecute(schedulerClient scheduler.SchedulerClient, buildExecuto
 			return err
 		}
 		log.Print("Request: ", request)
-		response := buildExecutor.Execute(stream.Context(), request)
+		response, _ := buildExecutor.Execute(stream.Context(), request)
 		log.Print("Response: ", response)
 		if err := stream.Send(response); err != nil {
 			return err

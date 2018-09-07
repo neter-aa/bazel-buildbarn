@@ -11,9 +11,8 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
-
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
 
 type blobAccessContentAddressableStorage struct {
@@ -24,6 +23,20 @@ func NewBlobAccessContentAddressableStorage(blobAccess blobstore.BlobAccess) Con
 	return &blobAccessContentAddressableStorage{
 		blobAccess: blobAccess,
 	}
+}
+
+func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Action, error) {
+	r := cas.blobAccess.Get(ctx, instance, digest)
+	data, err := ioutil.ReadAll(r)
+	r.Close()
+	if err != nil {
+		return nil, err
+	}
+	var action remoteexecution.Action
+	if err := proto.Unmarshal(data, &action); err != nil {
+		return nil, err
+	}
+	return &action, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) GetCommand(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Command, error) {

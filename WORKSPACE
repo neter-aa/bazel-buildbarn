@@ -381,3 +381,9 @@ go_repository(
     commit = "480db94d33e6088e08d628833b6c0705451d24bb",
     importpath = "github.com/go-redis/redis",
 )
+
+go_repository(
+    name = "com_github_bazelbuild_remote_apis",
+    commit = "6130f7e23ae157d5cf12c5d6af325a1dae57e235",
+    importpath = "github.com/bazelbuild/remote-apis",
+)

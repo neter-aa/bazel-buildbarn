@@ -9,11 +9,10 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
-	watcher "google.golang.org/genproto/googleapis/watcher/v1"
 	"google.golang.org/grpc"
 )
 
@@ -32,7 +31,6 @@ func main() {
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
-	watcher.RegisterWatcherServer(s, buildQueue)
 	scheduler.RegisterSchedulerServer(s, buildQueue)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s)

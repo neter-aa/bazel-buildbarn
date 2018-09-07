@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 type DigestKeyer func(instance string, digest *remoteexecution.Digest) (string, error)

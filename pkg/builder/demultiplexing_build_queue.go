@@ -1,46 +1,42 @@
 package builder
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
-	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
+	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+
 	"google.golang.org/genproto/googleapis/longrunning"
-	watcher "google.golang.org/genproto/googleapis/watcher/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type demultiplexingBuildQueue struct {
-	backends map[string]BuildQueue
+	backends map[string]remoteexecution.ExecutionServer
 }
 
-func NewDemultiplexingBuildQueue(backends map[string]BuildQueue) BuildQueue {
+func NewDemultiplexingBuildQueue(backends map[string]remoteexecution.ExecutionServer) remoteexecution.ExecutionServer {
 	return &demultiplexingBuildQueue{
 		backends: backends,
 	}
 }
 
-func (bq *demultiplexingBuildQueue) Execute(ctx context.Context, request *remoteexecution.ExecuteRequest) (*longrunning.Operation, error) {
-	if strings.ContainsRune(request.InstanceName, '|') {
-		return nil, status.Errorf(codes.InvalidArgument, "Instance name cannot contain pipe character")
+func (bq *demultiplexingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
+	if strings.ContainsRune(in.InstanceName, '|') {
+		return status.Errorf(codes.InvalidArgument, "Instance name cannot contain pipe character")
 	}
-	backend, ok := bq.backends[request.InstanceName]
+	backend, ok := bq.backends[in.InstanceName]
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "Unknown instance name")
+		return status.Errorf(codes.InvalidArgument, "Unknown instance name")
 	}
-	operation, err := backend.Execute(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	operationCopy := *operation
-	operationCopy.Name = fmt.Sprintf("%s|%s", request.InstanceName, operation.Name)
-	return &operationCopy, nil
+	return backend.Execute(in, &operationNamePrepender{
+		Execution_ExecuteServer: out,
+		prefix:                  in.InstanceName,
+	})
 }
 
-func (bq *demultiplexingBuildQueue) Watch(in *watcher.Request, out watcher.Watcher_WatchServer) error {
-	target := strings.SplitN(in.Target, "|", 2)
+func (bq *demultiplexingBuildQueue) WaitExecution(in *remoteexecution.WaitExecutionRequest, out remoteexecution.Execution_WaitExecutionServer) error {
+	target := strings.SplitN(in.Name, "|", 2)
 	if len(target) != 2 {
 		return status.Errorf(codes.InvalidArgument, "Unable to extract instance name from watch request")
 	}
@@ -49,6 +45,20 @@ func (bq *demultiplexingBuildQueue) Watch(in *watcher.Request, out watcher.Watch
 		return status.Errorf(codes.InvalidArgument, "Unknown instance name")
 	}
 	requestCopy := *in
-	requestCopy.Target = target[1]
-	return backend.Watch(&requestCopy, out)
+	requestCopy.Name = target[1]
+	return backend.WaitExecution(in, &operationNamePrepender{
+		Execution_ExecuteServer: out,
+		prefix:                  target[1],
+	})
+}
+
+type operationNamePrepender struct {
+	remoteexecution.Execution_ExecuteServer
+	prefix string
+}
+
+func (np *operationNamePrepender) Send(operation *longrunning.Operation) error {
+	operationCopy := *operation
+	operationCopy.Name = fmt.Sprintf("%s|%s", np.prefix, operation.Name)
+	return np.Execution_ExecuteServer.Send(&operationCopy)
 }
