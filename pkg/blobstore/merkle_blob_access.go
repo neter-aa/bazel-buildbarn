@@ -1,30 +1,30 @@
 package blobstore
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 
 	remoteexecution "google.golang.org/genproto/googleapis/devtools/remoteexecution/v1test"
 )
 
 // extractDigest validates the format of fields in a Digest object and returns them.
-func extractDigest(digest *remoteexecution.Digest) ([sha256.Size]byte, uint64, error) {
-	var checksumBytes [sha256.Size]byte
+func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, error) {
 	checksum, err := hex.DecodeString(digest.Hash)
 	if err != nil {
-		return checksumBytes, 0, err
+		return nil, 0, err
 	}
 	if len(checksum) != sha256.Size {
-		return checksumBytes, 0, fmt.Errorf("Expected checksum to be %d bytes; not %d", sha256.Size, len(checksum))
+		return nil, 0, fmt.Errorf("Expected checksum to be %d bytes; not %d", sha256.Size, len(checksum))
 	}
 	if digest.SizeBytes < 0 {
-		return checksumBytes, 0, fmt.Errorf("Invalid negative size: %d", digest.SizeBytes)
+		return nil, 0, fmt.Errorf("Invalid negative size: %d", digest.SizeBytes)
 	}
-	copy(checksumBytes[:], checksum)
-	return checksumBytes, uint64(digest.SizeBytes), nil
+	return checksum, digest.SizeBytes, nil
 }
 
 type merkleBlobAccess struct {
@@ -43,9 +43,10 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 		return &errorReader{err: err}
 	}
 	return &checksumValidatingReader{
-		ReadCloser: ba.blobAccess.Get(ctx, instance, digest),
-		checksum:   checksum,
-		sizeLeft:   size,
+		ReadCloser:       ba.blobAccess.Get(ctx, instance, digest),
+		expectedChecksum: checksum,
+		partialChecksum:  sha256.New(),
+		sizeLeft:         size,
 	}
 }
 
@@ -56,9 +57,10 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 		return err
 	}
 	return ba.blobAccess.Put(ctx, instance, digest, &checksumValidatingReader{
-		ReadCloser: r,
-		checksum:   checksum,
-		sizeLeft:   size,
+		ReadCloser:       r,
+		expectedChecksum: checksum,
+		partialChecksum:  sha256.New(),
+		sizeLeft:         size,
 	})
 }
 
@@ -75,13 +77,14 @@ func (ba *merkleBlobAccess) FindMissing(ctx context.Context, instance string, di
 type checksumValidatingReader struct {
 	io.ReadCloser
 
-	checksum [sha256.Size]byte
-	sizeLeft uint64
+	expectedChecksum []byte
+	partialChecksum  hash.Hash
+	sizeLeft         int64
 }
 
 func (r *checksumValidatingReader) Read(p []byte) (int, error) {
-	n, err := r.ReadCloser.Read(p)
-	nLen := uint64(n)
+	n, err := io.TeeReader(r.ReadCloser, r.partialChecksum).Read(p)
+	nLen := int64(n)
 	if nLen > r.sizeLeft {
 		return 0, fmt.Errorf("Blob is %d bytes longer than expected", nLen-r.sizeLeft)
 	}
@@ -89,10 +92,16 @@ func (r *checksumValidatingReader) Read(p []byte) (int, error) {
 
 	if err == io.EOF {
 		if r.sizeLeft != 0 {
-			err := fmt.Errorf("Blob is %d bytes shorter than expected", r.sizeLeft)
-			return 0, err
+			return 0, fmt.Errorf("Blob is %d bytes shorter than expected", r.sizeLeft)
 		}
-		// TODO(edsch): Validate checksum.
+
+		actualChecksum := r.partialChecksum.Sum(nil)
+		if bytes.Compare(actualChecksum, r.expectedChecksum) != 0 {
+			return 0, fmt.Errorf(
+				"Checksum of blob is %s, while %s was expected",
+				hex.EncodeToString(actualChecksum),
+				hex.EncodeToString(r.expectedChecksum))
+		}
 	}
 	return n, err
 }
