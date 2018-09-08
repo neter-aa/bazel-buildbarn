@@ -119,7 +119,11 @@ func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexe
 		return errors.New("Insufficent number of command arguments")
 	}
 	cmd := exec.CommandContext(ctx, command.Arguments[0], command.Arguments[1:]...)
-	cmd.Dir = pathBuildRoot
+	workingDirectory, err := joinPathSafe(pathBuildRoot, command.WorkingDirectory)
+	if err != nil {
+		return err
+	}
+	cmd.Dir = workingDirectory
 	cmd.Env = []string{"HOME=" + pathTempRoot}
 	for _, environmentVariable := range command.EnvironmentVariables {
 		cmd.Env = append(cmd.Env, environmentVariable.Name+"="+environmentVariable.Value)
