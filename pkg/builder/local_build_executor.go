@@ -87,6 +87,10 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, instance
 			return err
 		}
 	}
+	// TODO(edsch): Create symlinks in the input root in a secure way.
+	if len(directory.Symlinks) > 0 {
+		return errors.New("Creating symlinks in the input root is not yet supported")
+	}
 	return nil
 }
 
@@ -189,6 +193,15 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, instance stri
 			directory.Directories = append(directory.Directories, &remoteexecution.DirectoryNode{
 				Name:   name,
 				Digest: digest,
+			})
+		case os.ModeSymlink:
+			target, err := os.Readlink(fullPath)
+			if err != nil {
+				return nil, err
+			}
+			directory.Symlinks = append(directory.Symlinks, &remoteexecution.SymlinkNode{
+				Name:   name,
+				Target: target,
 			})
 		default:
 			return nil, fmt.Errorf("Path %s has an unsupported file type", basePath)
