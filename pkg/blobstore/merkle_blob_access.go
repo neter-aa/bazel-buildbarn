@@ -50,17 +50,21 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 	}
 }
 
-func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, r io.ReadCloser) error {
-	checksum, size, err := extractDigest(digest)
+func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+	checksum, digestSizeBytes, err := extractDigest(digest)
 	if err != nil {
 		r.Close()
 		return err
 	}
-	return ba.blobAccess.Put(ctx, instance, digest, &checksumValidatingReader{
+	if sizeBytes != digestSizeBytes {
+		r.Close()
+		return fmt.Errorf("Attempted to put object of size %d, whereas the digest contains size %d", sizeBytes, digestSizeBytes)
+	}
+	return ba.blobAccess.Put(ctx, instance, digest, sizeBytes, &checksumValidatingReader{
 		ReadCloser:       r,
 		expectedChecksum: checksum,
 		partialChecksum:  sha256.New(),
-		sizeLeft:         size,
+		sizeLeft:         sizeBytes,
 	})
 }
 

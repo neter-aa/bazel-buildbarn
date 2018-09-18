@@ -51,13 +51,13 @@ func (ba *remoteBlobAccess) Get(ctx context.Context, instance string, digest *re
 	}
 }
 
-func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, r io.ReadCloser) error {
+func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHash())
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
 		return err
 	}
-
+	req.ContentLength = sizeBytes
 	_, err = ctxhttp.Do(ctx, http.DefaultClient, req)
 	return err
 }

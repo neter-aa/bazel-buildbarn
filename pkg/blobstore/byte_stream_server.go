@@ -155,7 +155,7 @@ func (s *byteStreamServer) Write(stream bytestream.ByteStream_WriteServer) error
 	if digest == nil {
 		return errors.New("Unsupported resource naming scheme")
 	}
-	return s.blobAccess.Put(stream.Context(), instance, digest, &byteStreamWriteServerReader{
+	return s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, &byteStreamWriteServerReader{
 		stream:      stream,
 		writeOffset: int64(len(request.Data)),
 		data:        request.Data,

@@ -28,11 +28,13 @@ func (ba *sizeDistinguishingBlobAccess) Get(ctx context.Context, instance string
 	return ba.largeBlobAccess.Get(ctx, instance, digest)
 }
 
-func (ba *sizeDistinguishingBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, r io.ReadCloser) error {
+func (ba *sizeDistinguishingBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+	// Use the size that's in the digest; not the size provided. We
+	// can't re-obtain that in the other operations.
 	if digest.SizeBytes <= ba.cutoffSizeBytes {
-		return ba.smallBlobAccess.Put(ctx, instance, digest, r)
+		return ba.smallBlobAccess.Put(ctx, instance, digest, sizeBytes, r)
 	}
-	return ba.largeBlobAccess.Put(ctx, instance, digest, r)
+	return ba.largeBlobAccess.Put(ctx, instance, digest, sizeBytes, r)
 }
 
 type findMissingResults struct {

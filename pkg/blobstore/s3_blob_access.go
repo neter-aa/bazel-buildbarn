@@ -57,7 +57,7 @@ func (ba *s3BlobAccess) Get(ctx context.Context, instance string, digest *remote
 	return result.Body
 }
 
-func (ba *s3BlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, r io.ReadCloser) error {
+func (ba *s3BlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 	defer r.Close()
 	key, err := ba.blobKeyer(instance, digest)
 	if err != nil {

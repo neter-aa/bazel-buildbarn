@@ -55,10 +55,10 @@ func (ba *metricsBlobAccess) Get(ctx context.Context, instance string, digest *r
 	return r
 }
 
-func (ba *metricsBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, r io.ReadCloser) error {
+func (ba *metricsBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Put").Inc()
 	timeStart := time.Now()
-	err := ba.blobAccess.Put(ctx, instance, digest, r)
+	err := ba.blobAccess.Put(ctx, instance, digest, sizeBytes, r)
 	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Put").Observe(time.Now().Sub(timeStart).Seconds())
 	return err
 }

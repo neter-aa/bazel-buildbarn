@@ -107,9 +107,10 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 		file.Close()
 		return nil, false, err
 	}
+	sizeBytes := info.Size()
 	digest := &remoteexecution.Digest{
 		Hash:      hex.EncodeToString(hasher.Sum(nil)),
-		SizeBytes: info.Size(),
+		SizeBytes: sizeBytes,
 	}
 
 	// Rewind and store it.
@@ -117,7 +118,7 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 		file.Close()
 		return nil, false, err
 	}
-	if err := cas.blobAccess.Put(ctx, instance, digest, file); err != nil {
+	if err := cas.blobAccess.Put(ctx, instance, digest, sizeBytes, file); err != nil {
 		return nil, false, err
 	}
 	return digest, (info.Mode() & 0111) != 0, nil
@@ -129,7 +130,7 @@ func (cas *blobAccessContentAddressableStorage) PutTree(ctx context.Context, ins
 		return nil, err
 	}
 	digest := util.DigestFromData(data)
-	if err := cas.blobAccess.Put(ctx, instance, digest, ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+	if err := cas.blobAccess.Put(ctx, instance, digest, int64(len(data)), ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
 		return nil, err
 	}
 	return digest, nil
