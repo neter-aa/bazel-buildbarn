@@ -3,8 +3,6 @@ package cas
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"os"
@@ -98,6 +96,7 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 		return nil, false, err
 	}
 
+	// Determine whether the file is executable.
 	info, err := file.Stat()
 	if err != nil {
 		file.Close()
@@ -105,15 +104,10 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 	}
 
 	// Walk through the file to compute the digest.
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
+	digest, err := util.DigestFromReader(file)
+	if err != nil {
 		file.Close()
 		return nil, false, err
-	}
-	sizeBytes := info.Size()
-	digest := &remoteexecution.Digest{
-		Hash:      hex.EncodeToString(hasher.Sum(nil)),
-		SizeBytes: sizeBytes,
 	}
 
 	// Rewind and store it.
@@ -121,7 +115,7 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 		file.Close()
 		return nil, false, err
 	}
-	if err := cas.blobAccess.Put(ctx, instance, digest, sizeBytes, file); err != nil {
+	if err := cas.blobAccess.Put(ctx, instance, digest, digest.SizeBytes, file); err != nil {
 		return nil, false, err
 	}
 	return digest, (info.Mode() & 0111) != 0, nil
