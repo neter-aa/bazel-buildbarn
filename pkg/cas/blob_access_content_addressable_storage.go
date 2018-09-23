@@ -19,6 +19,9 @@ type blobAccessContentAddressableStorage struct {
 	blobAccess blobstore.BlobAccess
 }
 
+// NewBlobAccessContentAddressableStorage creates a
+// ContentAddressableStorage that reads and writes Content Adressable
+// Storage (CAS) objects from a BlobAccess based store.
 func NewBlobAccessContentAddressableStorage(blobAccess blobstore.BlobAccess) ContentAddressableStorage {
 	return &blobAccessContentAddressableStorage{
 		blobAccess: blobAccess,

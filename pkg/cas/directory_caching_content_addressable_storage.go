@@ -16,6 +16,10 @@ type directoryCachingContentAddressableStorage struct {
 	directories map[string]*remoteexecution.Directory
 }
 
+// NewDirectoryCachingContentAddressableStorage is an adapter for
+// ContentAddressableStorage that caches up a fixed number of
+// unmarshalled directory objects in memory. This reduces the amount of
+// network traffic needed.
 func NewDirectoryCachingContentAddressableStorage(base ContentAddressableStorage, digestKeyer util.DigestKeyer, maxDirectories int) ContentAddressableStorage {
 	return &directoryCachingContentAddressableStorage{
 		ContentAddressableStorage: base,

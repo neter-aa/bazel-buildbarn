@@ -33,6 +33,8 @@ type s3BlobAccess struct {
 	blobKeyer  util.DigestKeyer
 }
 
+// NewS3BlobAccess creates a BlobAccess that uses an S3 bucket as its backing
+// store.
 func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName *string, blobKeyer util.DigestKeyer) BlobAccess {
 	return &s3BlobAccess{
 		s3:         s3,

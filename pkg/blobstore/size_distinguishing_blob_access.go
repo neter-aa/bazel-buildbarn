@@ -13,6 +13,11 @@ type sizeDistinguishingBlobAccess struct {
 	cutoffSizeBytes int64
 }
 
+// NewSizeDistinguishingBlobAccess creates a BlobAccess that splits up
+// requests between two backends based on the size of the object
+// specified in the digest. Backends tend to have different performance
+// characteristics based on blob size. This adapter may be used to
+// optimize performance based on that.
 func NewSizeDistinguishingBlobAccess(smallBlobAccess BlobAccess, largeBlobAccess BlobAccess, cutoffSizeBytes int64) BlobAccess {
 	return &sizeDistinguishingBlobAccess{
 		smallBlobAccess: smallBlobAccess,

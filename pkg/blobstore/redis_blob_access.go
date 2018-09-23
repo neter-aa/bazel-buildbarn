@@ -19,6 +19,8 @@ type redisBlobAccess struct {
 	blobKeyer   util.DigestKeyer
 }
 
+// NewRedisBlobAccess creates a BlobAccess that uses Redis as its
+// backing store.
 func NewRedisBlobAccess(redisClient *redis.Client, blobKeyer util.DigestKeyer) BlobAccess {
 	return &redisBlobAccess{
 		redisClient: redisClient,

@@ -40,6 +40,8 @@ type metricsBlobAccess struct {
 	name       string
 }
 
+// NewMetricsBlobAccess creates an adapter for BlobAccess that adds
+// basic instrumentation in the form of Prometheus metrics.
 func NewMetricsBlobAccess(blobAccess BlobAccess, name string) BlobAccess {
 	return &metricsBlobAccess{
 		blobAccess: blobAccess,

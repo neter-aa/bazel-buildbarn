@@ -14,6 +14,8 @@ type blobAccessActionCache struct {
 	blobAccess blobstore.BlobAccess
 }
 
+// NewBlobAccessActionCache creates an ActionCache object that reads and
+// writes action cache entries from a BlobAccess based store.
 func NewBlobAccessActionCache(blobAccess blobstore.BlobAccess) ActionCache {
 	return &blobAccessActionCache{
 		blobAccess: blobAccess,

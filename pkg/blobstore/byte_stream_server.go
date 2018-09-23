@@ -75,6 +75,9 @@ type byteStreamServer struct {
 	blobAccess BlobAccess
 }
 
+// NewByteStreamServer creates a GRPC service for reading blobs from and
+// writing blobs to a BlobAccess. It is used by Bazel to access the
+// Content Addressable Storage (CAS).
 func NewByteStreamServer(blobAccess BlobAccess) bytestream.ByteStreamServer {
 	return &byteStreamServer{
 		blobAccess: blobAccess,

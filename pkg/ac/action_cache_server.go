@@ -14,6 +14,8 @@ type actionCacheServer struct {
 	allowUpdates bool
 }
 
+// NewActionCacheServer creates a GRPC service for serving the contents
+// of a Bazel Action Cache (AC) to Bazel.
 func NewActionCacheServer(actionCache ActionCache, allowUpdates bool) remoteexecution.ActionCacheServer {
 	return &actionCacheServer{
 		actionCache:  actionCache,

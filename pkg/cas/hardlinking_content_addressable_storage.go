@@ -23,6 +23,10 @@ type hardlinkingContentAddressableStorage struct {
 	filesPresentTotalSize int64
 }
 
+// NewHardlinkingContentAddressableStorage is an adapter for
+// ContentAddressableStorage that stores files in an internal directory.
+// Only after successfully downloading files, they are hardlinked to the
+// target location. This reduces the amount of network traffic needed.
 func NewHardlinkingContentAddressableStorage(base ContentAddressableStorage, digestKeyer util.DigestKeyer, path string, maxFiles int, maxSize int64) ContentAddressableStorage {
 	return &hardlinkingContentAddressableStorage{
 		ContentAddressableStorage: base,

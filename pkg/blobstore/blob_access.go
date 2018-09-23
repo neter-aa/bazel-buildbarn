@@ -7,6 +7,9 @@ import (
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
+// BlobAccess is an abstraction for a data store that can be used to
+// hold both a Bazel Action Cache (AC) and Content Addressable Storage
+// (CAS).
 type BlobAccess interface {
 	Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser
 	Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error

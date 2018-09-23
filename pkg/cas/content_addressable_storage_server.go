@@ -14,6 +14,8 @@ type contentAddressableStorageServer struct {
 	contentAddressableStorage blobstore.BlobAccess
 }
 
+// NewContentAddressableStorageServer creates a GRPC service for serving
+// the contents of a Bazel Content Addressable Storage (CAS) to Bazel.
 func NewContentAddressableStorageServer(contentAddressableStorage blobstore.BlobAccess) remoteexecution.ContentAddressableStorageServer {
 	return &contentAddressableStorageServer{
 		contentAddressableStorage: contentAddressableStorage,

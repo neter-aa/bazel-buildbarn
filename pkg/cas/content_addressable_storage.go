@@ -6,6 +6,8 @@ import (
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
+// ContentAddressableStorage provides typed access to a Bazel Content
+// Addressable Storage (CAS).
 type ContentAddressableStorage interface {
 	GetAction(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Action, error)
 	GetCommand(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Command, error)

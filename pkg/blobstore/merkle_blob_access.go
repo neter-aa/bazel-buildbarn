@@ -31,6 +31,11 @@ type merkleBlobAccess struct {
 	blobAccess BlobAccess
 }
 
+// NewMerkleBlobAccess creates an adapter that validates that blobs read
+// from and written to storage correspond with the digest that is used
+// for identification. It ensures that the size and the SHA-256 based
+// checksum match. This is used to ensure clients cannot corrupt the CAS
+// and that if corruption were to occur, use of corrupted data is prevented.
 func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 	return &merkleBlobAccess{
 		blobAccess: blobAccess,
