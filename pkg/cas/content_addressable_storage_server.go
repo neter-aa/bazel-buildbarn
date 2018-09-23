@@ -2,7 +2,6 @@ package cas
 
 import (
 	"context"
-	"log"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -24,7 +23,6 @@ func NewContentAddressableStorageServer(contentAddressableStorage blobstore.Blob
 func (s *contentAddressableStorageServer) FindMissingBlobs(ctx context.Context, in *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
 	digests, err := s.contentAddressableStorage.FindMissing(ctx, in.InstanceName, in.BlobDigests)
 	if err != nil {
-		log.Print("ContentAddressableStorage.FindMissingBlobs failed: ", err)
 		return nil, err
 	}
 	return &remoteexecution.FindMissingBlobsResponse{

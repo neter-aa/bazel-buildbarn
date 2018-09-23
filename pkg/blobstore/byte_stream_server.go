@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 
@@ -163,6 +162,5 @@ func (s *byteStreamServer) Write(stream bytestream.ByteStream_WriteServer) error
 }
 
 func (s *byteStreamServer) QueryWriteStatus(ctx context.Context, in *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
-	log.Print("Attempted to call ByteStream.QueryWriteStatus")
-	return nil, errors.New("Fail!")
+	return nil, status.Error(codes.Unimplemented, "This service does not support querying write status")
 }
