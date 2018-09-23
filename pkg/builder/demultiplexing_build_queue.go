@@ -15,6 +15,11 @@ type demultiplexingBuildQueue struct {
 	backends map[string]remoteexecution.ExecutionServer
 }
 
+// NewDemultiplexingBuildQueue creates an adapter for the Execution
+// service to forward requests to different backends backed on the
+// instance given in requests. Job identifiers returned by backends are
+// prefixed with the instance name, so that successive requests may
+// demultiplex the requests later on.
 func NewDemultiplexingBuildQueue(backends map[string]remoteexecution.ExecutionServer) remoteexecution.ExecutionServer {
 	return &demultiplexingBuildQueue{
 		backends: backends,

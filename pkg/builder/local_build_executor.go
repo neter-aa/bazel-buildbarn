@@ -53,6 +53,8 @@ type localBuildExecutor struct {
 	contentAddressableStorage cas.ContentAddressableStorage
 }
 
+// NewLocalBuildExecutor returns a BuildExecutor that executes build
+// steps on the local system.
 func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage) BuildExecutor {
 	return &localBuildExecutor{
 		contentAddressableStorage: contentAddressableStorage,

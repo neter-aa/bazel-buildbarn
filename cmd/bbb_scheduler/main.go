@@ -23,15 +23,15 @@ func main() {
 		log.Fatal(http.ListenAndServe(":80", nil))
 	}()
 
-	buildQueue := builder.NewWorkerBuildQueue(util.KeyDigestWithInstance, 16)
+	executionServer, schedulerServer := builder.NewWorkerBuildQueue(util.KeyDigestWithInstance, 16)
 
 	// RPC server.
 	s := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
-	remoteexecution.RegisterExecutionServer(s, buildQueue)
-	scheduler.RegisterSchedulerServer(s, buildQueue)
+	remoteexecution.RegisterExecutionServer(s, executionServer)
+	scheduler.RegisterSchedulerServer(s, schedulerServer)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s)
 

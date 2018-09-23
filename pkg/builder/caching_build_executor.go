@@ -12,6 +12,8 @@ type cachingBuildExecutor struct {
 	actionCache ac.ActionCache
 }
 
+// NewCachingBuildExecutor creates an adapter for BuildExecutor that
+// stores action results in the Action Cache (AC) if they may be cached.
 func NewCachingBuildExecutor(base BuildExecutor, actionCache ac.ActionCache) BuildExecutor {
 	return &cachingBuildExecutor{
 		base:        base,

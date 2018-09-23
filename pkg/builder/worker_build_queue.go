@@ -62,7 +62,7 @@ func (job *workerBuildJob) waitExecution(out remoteexecution.Execution_ExecuteSe
 	}
 }
 
-type WorkerBuildQueue struct {
+type workerBuildQueue struct {
 	deduplicationKeyer util.DigestKeyer
 	jobsPendingMax     uint
 
@@ -73,8 +73,11 @@ type WorkerBuildQueue struct {
 	jobsPendingInsertionWakeup *sync.Cond
 }
 
-func NewWorkerBuildQueue(deduplicationKeyer util.DigestKeyer, jobsPendingMax uint) *WorkerBuildQueue {
-	bq := &WorkerBuildQueue{
+// NewWorkerBuildQueue creates an execution server that places execution
+// requests in a queue. These execution requests may be extracted by
+// workers.
+func NewWorkerBuildQueue(deduplicationKeyer util.DigestKeyer, jobsPendingMax uint) (remoteexecution.ExecutionServer, scheduler.SchedulerServer) {
+	bq := &workerBuildQueue{
 		deduplicationKeyer: deduplicationKeyer,
 		jobsPendingMax:     jobsPendingMax,
 
@@ -82,10 +85,10 @@ func NewWorkerBuildQueue(deduplicationKeyer util.DigestKeyer, jobsPendingMax uin
 		jobsDeduplicationMap: map[string]*workerBuildJob{},
 	}
 	bq.jobsPendingInsertionWakeup = sync.NewCond(&bq.jobsLock)
-	return bq
+	return bq, bq
 }
 
-func (bq *WorkerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
+func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
 	deduplicationKey, err := bq.deduplicationKeyer(in.InstanceName, in.ActionDigest)
 	if err != nil {
 		return err
@@ -117,7 +120,7 @@ func (bq *WorkerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remo
 	return job.waitExecution(out)
 }
 
-func (bq *WorkerBuildQueue) WaitExecution(in *remoteexecution.WaitExecutionRequest, out remoteexecution.Execution_WaitExecutionServer) error {
+func (bq *workerBuildQueue) WaitExecution(in *remoteexecution.WaitExecutionRequest, out remoteexecution.Execution_WaitExecutionServer) error {
 	bq.jobsLock.Lock()
 	defer bq.jobsLock.Unlock()
 
@@ -140,7 +143,7 @@ func executeOnWorker(stream scheduler.Scheduler_GetWorkServer, request *remoteex
 	return response
 }
 
-func (bq *WorkerBuildQueue) GetWork(stream scheduler.Scheduler_GetWorkServer) error {
+func (bq *workerBuildQueue) GetWork(stream scheduler.Scheduler_GetWorkServer) error {
 	bq.jobsLock.Lock()
 	defer bq.jobsLock.Unlock()
 
