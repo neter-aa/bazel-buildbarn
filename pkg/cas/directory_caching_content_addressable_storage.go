@@ -2,6 +2,7 @@ package cas
 
 import (
 	"context"
+	"math/rand"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -13,7 +14,8 @@ type directoryCachingContentAddressableStorage struct {
 	digestKeyer    util.DigestKeyer
 	maxDirectories int
 
-	directories map[string]*remoteexecution.Directory
+	directoriesPresentList    []string
+	directoriesPresentMessage map[string]*remoteexecution.Directory
 }
 
 // NewDirectoryCachingContentAddressableStorage is an adapter for
@@ -27,7 +29,21 @@ func NewDirectoryCachingContentAddressableStorage(base ContentAddressableStorage
 		digestKeyer:    digestKeyer,
 		maxDirectories: maxDirectories,
 
-		directories: map[string]*remoteexecution.Directory{},
+		directoriesPresentMessage: map[string]*remoteexecution.Directory{},
+	}
+}
+
+func (cas *directoryCachingContentAddressableStorage) makeSpace() {
+	for len(cas.directoriesPresentList) >= cas.maxDirectories {
+		// Pick random directory to remove.
+		idx := rand.Intn(len(cas.directoriesPresentList))
+		key := cas.directoriesPresentList[idx]
+
+		// Remove directory from bookkeeping.
+		delete(cas.directoriesPresentMessage, key)
+		last := len(cas.directoriesPresentList) - 1
+		cas.directoriesPresentList[idx] = cas.directoriesPresentList[last]
+		cas.directoriesPresentList = cas.directoriesPresentList[:last]
 	}
 }
 
@@ -36,14 +52,15 @@ func (cas *directoryCachingContentAddressableStorage) GetDirectory(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	if directory, ok := cas.directories[key]; ok {
+	if directory, ok := cas.directoriesPresentMessage[key]; ok {
 		return directory, nil
 	}
 	directory, err := cas.ContentAddressableStorage.GetDirectory(ctx, instance, digest)
 	if err != nil {
 		return nil, err
 	}
-	// TODO(edsch): Respect maxDirectories.
-	cas.directories[key] = directory
+	cas.makeSpace()
+	cas.directoriesPresentList = append(cas.directoriesPresentList, key)
+	cas.directoriesPresentMessage[key] = directory
 	return directory, nil
 }
