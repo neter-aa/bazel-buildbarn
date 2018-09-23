@@ -42,7 +42,7 @@ type findMissingResults struct {
 	err     error
 }
 
-func callFindMissing(blobAccess BlobAccess, ctx context.Context, instance string, digests []*remoteexecution.Digest) findMissingResults {
+func callFindMissing(ctx context.Context, blobAccess BlobAccess, instance string, digests []*remoteexecution.Digest) findMissingResults {
 	missing, err := blobAccess.FindMissing(ctx, instance, digests)
 	return findMissingResults{missing: missing, err: err}
 }
@@ -62,9 +62,9 @@ func (ba *sizeDistinguishingBlobAccess) FindMissing(ctx context.Context, instanc
 	// Forward FindMissing() to both implementations.
 	smallResultsChan := make(chan findMissingResults, 1)
 	go func() {
-		smallResultsChan <- callFindMissing(ba.smallBlobAccess, ctx, instance, smallDigests)
+		smallResultsChan <- callFindMissing(ctx, ba.smallBlobAccess, instance, smallDigests)
 	}()
-	largeResults := callFindMissing(ba.largeBlobAccess, ctx, instance, largeDigests)
+	largeResults := callFindMissing(ctx, ba.largeBlobAccess, instance, largeDigests)
 	smallResults := <-smallResultsChan
 
 	// Recombine results.
