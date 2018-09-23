@@ -86,7 +86,7 @@ func NewByteStreamServer(blobAccess BlobAccess) bytestream.ByteStreamServer {
 
 func (s *byteStreamServer) Read(in *bytestream.ReadRequest, out bytestream.ByteStream_ReadServer) error {
 	if in.ReadOffset != 0 || in.ReadLimit != 0 {
-		return status.Error(codes.Unimplemented, "This service does not support downloading directory trees")
+		return status.Error(codes.Unimplemented, "This service does not support downloading partial files")
 	}
 
 	instance, digest := parseResourceNameRead(in.ResourceName)
