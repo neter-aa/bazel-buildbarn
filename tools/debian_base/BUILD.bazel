@@ -12,6 +12,7 @@ container_image(
         "@debian_deb_dash//file",
         "@debian_deb_debianutils//file",
         "@debian_deb_findutils//file",
+        "@debian_deb_gawk//file",
         "@debian_deb_gcc_6//file",
         "@debian_deb_gcc//file",
         "@debian_deb_grep//file",
@@ -32,7 +33,9 @@ container_image(
         "@debian_deb_libperl524//file",
         "@debian_deb_libpython27_minimal//file",
         "@debian_deb_libpython27_stdlib//file",
+        "@debian_deb_libreadline7//file",
         "@debian_deb_libselinux1//file",
+        "@debian_deb_libsigsegv2//file",
         "@debian_deb_libstdcxx_6_dev//file",
         "@debian_deb_libstdcxx6//file",
         "@debian_deb_libtinfo5//file",
@@ -46,5 +49,8 @@ container_image(
         "@debian_deb_zlib1g//file",
     ],
     files = ["etc/passwd"],
+    symlinks = {
+        "/usr/bin/awk": "gawk",
+    },
     visibility = ["//cmd:__subpackages__"],
 )

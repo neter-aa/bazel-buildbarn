@@ -71,6 +71,12 @@ http_file(
 )
 
 http_file(
+    name = "debian_deb_gawk",
+    sha256 = "6ee514768aa5fb1bb1c5ad4339e0db421a21734e8a37ddbcd36c2b03139a63b6",
+    url = "http://ftp.nl.debian.org/debian/pool/main/g/gawk/gawk_4.1.4+dfsg-1_amd64.deb",
+)
+
+http_file(
     name = "debian_deb_gcc",
     sha256 = "64902f7486389eaf20a9ff8efaed81cb41948b43453fb6be4472418bca0a231b",
     url = "http://ftp.nl.debian.org/debian/pool/main/g/gcc-defaults/gcc_6.3.0-4_amd64.deb",
@@ -191,9 +197,21 @@ http_file(
 )
 
 http_file(
+    name = "debian_deb_libreadline7",
+    sha256 = "9d90cd02554b1f0637fc1fbceb3bd69feb576b07a4d25df82970ab04f71f35da",
+    url = "http://ftp.nl.debian.org/debian/pool/main/r/readline/libreadline7_7.0-3_amd64.deb",
+)
+
+http_file(
     name = "debian_deb_libselinux1",
     sha256 = "2d70d0f68783b14f812690cde1f1fcaade8befc6882f712fb7545bc86a207be0",
     url = "http://ftp.nl.debian.org/debian/pool/main/libs/libselinux/libselinux1_2.6-3+b3_amd64.deb",
+)
+
+http_file(
+    name = "debian_deb_libsigsegv2",
+    sha256 = "4021d318a8e9480d740fecfe5efba7a6d60eacc66a064ca3b5c1889b8c67e506",
+    url = "http://ftp.nl.debian.org/debian/pool/main/libs/libsigsegv/libsigsegv2_2.10-5_amd64.deb",
 )
 
 http_file(
