@@ -67,7 +67,7 @@ set up dependencies, such as Redis and S3, are not included.
 Bazel can be configured to perform remote execution against Bazel Buildbarn by
 placing the following in `.bazelrc`:
 
-    build:bbb-debian9 --cpu=k8 --crosstool_top=@bazel_buildbarn//toolchain:debian9 --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian9 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
+    build:bbb-debian9 --host_cpu=k8 --cpu=k8 --crosstool_top=@bazel_buildbarn//toolchain:debian9 --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian9 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
 
 In the configuration above, we assume that the container image for the
 worker based on Debian 9 is used. For this image, we depend on a C/C++
