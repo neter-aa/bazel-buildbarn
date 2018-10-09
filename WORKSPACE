@@ -300,8 +300,10 @@ gazelle_dependencies()
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    commit = "bc3f534c19ffdf835e524e11f0f825b3eaf541c3",
     importpath = "github.com/aws/aws-sdk-go",
+    sha256 = "b6cd9c78df8aeb973f8d9b01d11c1d1e5096850614b3a3e0b4111ec747d811d3",
+    strip_prefix = "aws-sdk-go-bc3f534c19ffdf835e524e11f0f825b3eaf541c3",
+    urls = ["https://github.com/aws/aws-sdk-go/archive/bc3f534c19ffdf835e524e11f0f825b3eaf541c3.tar.gz"],
 )
 
 go_repository(
