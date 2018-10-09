@@ -119,6 +119,12 @@ http_file(
 )
 
 http_file(
+    name = "debian_deb_libbz2",
+    sha256 = "05b985f0eb5b88e0c2767b6cb1c132b5b22f8ff7b515eb36690205e2193197c9",
+    url = "http://ftp.nl.debian.org/debian/pool/main/b/bzip2/libbz2-1.0_1.0.6-8.1_amd64.deb",
+)
+
+http_file(
     name = "debian_deb_libc6",
     sha256 = "e57b3e24ea79fcdb46549d4ed2b95bb9657f21bba60ed5d9136d5b7112500084",
     url = "http://ftp.nl.debian.org/debian/pool/main/g/glibc/libc6_2.24-11+deb9u3_amd64.deb",
@@ -269,9 +275,21 @@ http_file(
 )
 
 http_file(
+    name = "debian_deb_unzip",
+    sha256 = "d0d8d9ab3e55b139a207c43b7a15faec17faf7b0da77f9b844ffd2d2c03b68e6",
+    url = "http://ftp.nl.debian.org/debian/pool/main/u/unzip/unzip_6.0-21_amd64.deb",
+)
+
+http_file(
     name = "debian_deb_xz_utils",
     sha256 = "6d07d82ab8d58004f3bbe2ca82d1e812c94f84c297dce7d9a2d3bb7552cf0b57",
     url = "http://ftp.nl.debian.org/debian/pool/main/x/xz-utils/xz-utils_5.2.2-1.2+b1_amd64.deb",
+)
+
+http_file(
+    name = "debian_deb_zip",
+    sha256 = "3dabdf9fecbdd7cab151fd9f20355f79c150a8e939be7dcecb2c0574f8dadf69",
+    url = "http://ftp.nl.debian.org/debian/pool/main/z/zip/zip_3.0-11+b1_amd64.deb",
 )
 
 http_file(
