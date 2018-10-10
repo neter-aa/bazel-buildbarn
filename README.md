@@ -67,13 +67,26 @@ set up dependencies, such as Redis and S3, are not included.
 Bazel can be configured to perform remote execution against Bazel Buildbarn by
 placing the following in `.bazelrc`:
 
-    build:bbb-debian9 --host_cpu=k8 --cpu=k8 --crosstool_top=@bazel_buildbarn//toolchain:debian9 --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian9 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
+    build:bbb-debian8 --host_cpu=k8 --cpu=k8 --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/default:toolchain --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian8 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
 
 In the configuration above, we assume that the container image for the
-worker based on Debian 9 is used. For this image, we depend on a C/C++
-compiler configuration for Debian 9 that is stored in this repository,
-meaning that you will need to add a `bazel_buildbarn` repository
-reference to your `WORKSPACE` file. Once added, you may perform remote
-builds against Bazel Buildbarn by running the command below:
+worker based on Debian 8 is used. For this image, we depend on a C/C++
+compiler configuration for Debian 8 that is stored in
+[the Bazel Toolchains repository](https://github.com/bazelbuild/bazel-toolchains),
+meaning that you will need to add the following to your `WORKSPACE` file
+([source](https://releases.bazel.build/bazel-toolchains.html)):
 
-    bazel build --config=bbb-debian9 //...
+    http_archive(
+        name = "bazel_toolchains",
+        sha256 = "4329663fe6c523425ad4d3c989a8ac026b04e1acedeceb56aa4b190fa7f3973c",
+        strip_prefix = "bazel-toolchains-bc09b995c137df042bb80a395b73d7ce6f26afbe",
+        urls = [
+            "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/bc09b995c137df042bb80a395b73d7ce6f26afbe.tar.gz",
+            "https://github.com/bazelbuild/bazel-toolchains/archive/bc09b995c137df042bb80a395b73d7ce6f26afbe.tar.gz",
+        ],
+    )
+
+Once added, you may perform remote builds against Bazel Buildbarn by running
+the command below:
+
+    bazel build --config=bbb-debian8 //...

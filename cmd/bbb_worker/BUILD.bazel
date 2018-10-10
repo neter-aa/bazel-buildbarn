@@ -28,7 +28,7 @@ go_binary(
 
 container_image(
     name = "bbb_worker_container",
-    base = "//tools/debian_base",
+    base = "//tools/debian8_base",
     entrypoint = ["/bbb_worker"],
     files = [":bbb_worker"],
     visibility = ["//visibility:public"],

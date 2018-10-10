@@ -1,13 +1,13 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: bbb-worker-debian9
+  name: bbb-worker-debian8
 spec:
   replicas: 8
   selector:
     matchLabels:
       app: bbb-worker
-      instance: debian9
+      instance: debian8
   template:
     metadata:
       annotations:
@@ -15,11 +15,11 @@ spec:
         prometheus.io/scrape: "true"
       labels:
         app: bbb-worker
-        instance: debian9
+        instance: debian8
     spec:
       containers:
       - args:
-        - -scheduler=bbb-scheduler-debian9:8981
+        - -scheduler=bbb-scheduler-debian8:8981
         image: ...
         name: bbb-worker
         resources:

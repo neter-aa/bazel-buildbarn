@@ -37,7 +37,7 @@ func main() {
 		actionCacheAllowUpdates = flag.Bool("ac-allow-updates", false, "Allow clients to write into the action cache")
 		blobstoreConfig         = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
 	)
-	flag.Var(&schedulersList, "scheduler", "Backend capable of executing build actions. Example: debian9|hostname-of-debian9-scheduler:8981")
+	flag.Var(&schedulersList, "scheduler", "Backend capable of executing build actions. Example: debian8|hostname-of-debian8-scheduler:8981")
 	flag.Parse()
 
 	// Web server for metrics and profiling.

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - args:
-        - -scheduler=debian9|bbb-scheduler-debian9:8981
+        - -scheduler=debian8|bbb-scheduler-debian8:8981
         image: ...
         name: bbb-frontend
         ports:

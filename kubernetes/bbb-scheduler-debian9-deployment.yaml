@@ -1,18 +1,18 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: bbb-scheduler-debian9
+  name: bbb-scheduler-debian8
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: bbb-scheduler
-      instance: debian9
+      instance: debian8
   template:
     metadata:
       labels:
         app: bbb-scheduler
-        instance: debian9
+        instance: debian8
     spec:
       containers:
       - image: ...
