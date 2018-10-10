@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 	"net/http"
@@ -17,13 +18,18 @@ import (
 )
 
 func main() {
+	var (
+		jobsPendingMax = flag.Uint("jobs-pending-max", 100, "Maximum number of build actions to be enqueued")
+	)
+	flag.Parse()
+
 	// Web server for metrics and profiling.
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Fatal(http.ListenAndServe(":80", nil))
 	}()
 
-	executionServer, schedulerServer := builder.NewWorkerBuildQueue(util.KeyDigestWithInstance, 16)
+	executionServer, schedulerServer := builder.NewWorkerBuildQueue(util.KeyDigestWithInstance, *jobsPendingMax)
 
 	// RPC server.
 	s := grpc.NewServer(
