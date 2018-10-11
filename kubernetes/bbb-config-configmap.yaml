@@ -17,6 +17,7 @@ data:
             region: "eu-west-1"
             disable_ssl: true
             bucket: "content-addressable-storage"
+            key_prefix: "my/prefix/"
           }
         }
         cutoff_size_bytes: 1048576

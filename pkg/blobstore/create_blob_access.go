@@ -78,6 +78,7 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			s3,
 			uploader,
 			&backend.S3.Bucket,
+			&backend.S3.KeyPrefix,
 			digestKeyer)
 	case *pb.BlobAccessConfiguration_SizeDistinguishing:
 		backendType = "size_distinguishing"

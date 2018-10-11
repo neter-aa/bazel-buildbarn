@@ -35,12 +35,28 @@ type s3BlobAccess struct {
 
 // NewS3BlobAccess creates a BlobAccess that uses an S3 bucket as its backing
 // store.
-func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName *string, blobKeyer util.DigestKeyer) BlobAccess {
+func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName, keyPrefix *string, blobKeyer util.DigestKeyer) BlobAccess {
 	return &s3BlobAccess{
 		s3:         s3,
 		uploader:   uploader,
 		bucketName: bucketName,
-		blobKeyer:  blobKeyer,
+		blobKeyer:  prefixedKeyer(*keyPrefix, blobKeyer),
+	}
+}
+
+func prefixedKeyer(keyPrefix string, underlyingKeyer util.DigestKeyer) util.DigestKeyer {
+	if len(keyPrefix) == 0 {
+		return underlyingKeyer
+	}
+	if keyPrefix[len(keyPrefix)-1] != '/' {
+		keyPrefix += "/"
+	}
+	return func(instance string, digest *remoteexecution.Digest) (string, error) {
+		key, err := underlyingKeyer(instance, digest)
+		if err == nil {
+			return keyPrefix + key, nil
+		}
+		return key, err
 	}
 }
 
