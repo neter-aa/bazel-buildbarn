@@ -67,11 +67,33 @@ set up dependencies, such as Redis and S3, are not included.
 Bazel can be configured to perform remote execution against Bazel Buildbarn by
 placing the following in `.bazelrc`:
 
-    build:bbb-debian8 --host_cpu=k8 --cpu=k8 --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/default:toolchain --experimental_strict_action_env --genrule_strategy=remote --remote_executor=address.of.your.buildbarn.deployment.here.com:8980 --remote_instance_name=debian8 --spawn_strategy=remote --strategy=Closure=remote --strategy=Javac=remote
+    # From bazel-toolchains/configs/debian8_clang/0.4.0/toolchain.bazelrc.
+    build:bbb-debian8 --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+    build:bbb-debian8 --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/default:toolchain
+    build:bbb-debian8 --extra_execution_platforms=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
+    build:bbb-debian8 --extra_toolchains=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/cpp:cc-toolchain-clang-x86_64-default
+    build:bbb-debian8 --host_javabase=@bazel_toolchains//configs/debian8_clang/0.4.0:jdk8
+    build:bbb-debian8 --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
+    build:bbb-debian8 --host_platform=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
+    build:bbb-debian8 --javabase=@bazel_toolchains//configs/debian8_clang/0.4.0:jdk8
+    build:bbb-debian8 --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
+    build:bbb-debian8 --platforms=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
+    # Specific to remote execution.
+    build:bbb-debian8 --action_env=PATH=/bin:/usr/bin
+    build:bbb-debian8 --cpu=k8
+    build:bbb-debian8 --experimental_strict_action_env
+    build:bbb-debian8 --genrule_strategy=remote
+    build:bbb-debian8 --host_cpu=k8
+    build:bbb-debian8 --jobs=8
+    build:bbb-debian8 --remote_executor=address.of.your.buildbarn.deployment.here.com:8980
+    build:bbb-debian8 --remote_instance_name=debian8
+    build:bbb-debian8 --spawn_strategy=remote
+    build:bbb-debian8 --strategy=Closure=remote
+    build:bbb-debian8 --strategy=Javac=remote
 
 In the configuration above, we assume that the container image for the
-worker based on Debian 8 is used. For this image, we depend on a C/C++
-compiler configuration for Debian 8 that is stored in
+worker based on Debian 8 is used. For this image, we depend on a compiler
+configuration for Debian 8 that is stored in
 [the Bazel Toolchains repository](https://github.com/bazelbuild/bazel-toolchains),
 meaning that you will need to add the following to your `WORKSPACE` file
 ([source](https://releases.bazel.build/bazel-toolchains.html)):
