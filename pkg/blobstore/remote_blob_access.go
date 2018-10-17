@@ -2,6 +2,7 @@ package blobstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,6 +61,10 @@ func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *re
 	req.ContentLength = sizeBytes
 	_, err = ctxhttp.Do(ctx, http.DefaultClient, req)
 	return err
+}
+
+func (ba *remoteBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	return errors.New("Bazel HTTP caching protocol does not support object deletion")
 }
 
 func (ba *remoteBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {

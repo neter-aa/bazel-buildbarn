@@ -65,6 +65,14 @@ func (ba *metricsBlobAccess) Put(ctx context.Context, instance string, digest *r
 	return err
 }
 
+func (ba *metricsBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Delete").Inc()
+	timeStart := time.Now()
+	err := ba.blobAccess.Delete(ctx, instance, digest)
+	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Delete").Observe(time.Now().Sub(timeStart).Seconds())
+	return err
+}
+
 func (ba *metricsBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "FindMissing").Inc()
 	timeStart := time.Now()

@@ -13,6 +13,7 @@ import (
 type BlobAccess interface {
 	Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser
 	Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error
+	Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error
 	FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error)
 }
 

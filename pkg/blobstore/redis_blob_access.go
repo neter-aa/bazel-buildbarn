@@ -62,6 +62,14 @@ func (ba *redisBlobAccess) Put(ctx context.Context, instance string, digest *rem
 	return ba.redisClient.Set(key, value, 0).Err()
 }
 
+func (ba *redisBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	key, err := ba.blobKeyer(instance, digest)
+	if err != nil {
+		return err
+	}
+	return ba.redisClient.Del(key).Err()
+}
+
 func (ba *redisBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
