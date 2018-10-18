@@ -73,6 +73,18 @@ func (ba *s3BlobAccess) Put(ctx context.Context, instance string, digest *remote
 	return convertS3Error(err)
 }
 
+func (ba *s3BlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	key, err := ba.blobKeyer(instance, digest)
+	if err != nil {
+		return err
+	}
+	_, err = ba.s3.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+		Bucket: ba.bucketName,
+		Key:    &key,
+	})
+	return convertS3Error(err)
+}
+
 func (ba *s3BlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	var missing []*remoteexecution.Digest
 	for _, digest := range digests {

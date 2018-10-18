@@ -62,6 +62,10 @@ func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *re
 	return err
 }
 
+func (ba *remoteBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	return status.Error(codes.Unimplemented, "Bazel HTTP caching protocol does not support object deletion")
+}
+
 func (ba *remoteBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	var missing []*remoteexecution.Digest
 	for _, digest := range digests {

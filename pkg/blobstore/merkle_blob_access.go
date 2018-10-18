@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"log"
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
@@ -52,6 +53,17 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 		expectedChecksum: checksum,
 		partialChecksum:  sha256.New(),
 		sizeLeft:         size,
+		invalidator: func() {
+			// Trigger blob deletion in case we detect data
+			// corruption. This will cause future calls to
+			// FindMissing() to indicate absence, causing clients to
+			// re-upload them and/or build actions to be retried.
+			if err := ba.blobAccess.Delete(ctx, instance, digest); err == nil {
+				log.Printf("Successfully deleted corrupted blob %s", digest)
+			} else {
+				log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
+			}
+		},
 	}
 }
 
@@ -70,7 +82,16 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 		expectedChecksum: checksum,
 		partialChecksum:  sha256.New(),
 		sizeLeft:         sizeBytes,
+		invalidator:      func() {},
 	})
+}
+
+func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	_, _, err := extractDigest(digest)
+	if err != nil {
+		return err
+	}
+	return ba.blobAccess.Delete(ctx, instance, digest)
 }
 
 func (ba *merkleBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
@@ -89,23 +110,29 @@ type checksumValidatingReader struct {
 	expectedChecksum []byte
 	partialChecksum  hash.Hash
 	sizeLeft         int64
+
+	// Called whenever size/checksum inconsistencies are detected.
+	invalidator func()
 }
 
 func (r *checksumValidatingReader) Read(p []byte) (int, error) {
 	n, err := io.TeeReader(r.ReadCloser, r.partialChecksum).Read(p)
 	nLen := int64(n)
 	if nLen > r.sizeLeft {
+		r.invalidator()
 		return 0, fmt.Errorf("Blob is %d bytes longer than expected", nLen-r.sizeLeft)
 	}
 	r.sizeLeft -= nLen
 
 	if err == io.EOF {
 		if r.sizeLeft != 0 {
+			r.invalidator()
 			return 0, fmt.Errorf("Blob is %d bytes shorter than expected", r.sizeLeft)
 		}
 
 		actualChecksum := r.partialChecksum.Sum(nil)
 		if bytes.Compare(actualChecksum, r.expectedChecksum) != 0 {
+			r.invalidator()
 			return 0, fmt.Errorf(
 				"Checksum of blob is %s, while %s was expected",
 				hex.EncodeToString(actualChecksum),

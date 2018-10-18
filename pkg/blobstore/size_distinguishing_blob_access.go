@@ -42,6 +42,13 @@ func (ba *sizeDistinguishingBlobAccess) Put(ctx context.Context, instance string
 	return ba.largeBlobAccess.Put(ctx, instance, digest, sizeBytes, r)
 }
 
+func (ba *sizeDistinguishingBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
+	if digest.SizeBytes <= ba.cutoffSizeBytes {
+		return ba.smallBlobAccess.Delete(ctx, instance, digest)
+	}
+	return ba.largeBlobAccess.Delete(ctx, instance, digest)
+}
+
 type findMissingResults struct {
 	missing []*remoteexecution.Digest
 	err     error
