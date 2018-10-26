@@ -36,7 +36,9 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string) (BlobAccess, Bl
 	if err != nil {
 		return nil, nil, err
 	}
-	return NewMetricsBlobAccess(NewMerkleBlobAccess(contentAddressableStorage), "cas_merkle"), actionCache, nil
+	return NewMetricsBlobAccess(
+		NewMerkleBlobAccess(NewEmptyBlobFilteringBlobAccess(contentAddressableStorage)),
+		"cas_merkle"), actionCache, nil
 }
 
 func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, digestKeyer util.DigestKeyer) (BlobAccess, error) {
