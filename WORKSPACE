@@ -3,6 +3,13 @@ workspace(name = "bazel_buildbarn")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "bazel_gomock",
+    sha256 = "2f8df5baab5ed7d7aaa4c73a7789e468b675c344312cb03c3d9b677563cac535",
+    strip_prefix = "bazel_gomock-5b73edb74e569ff404b3beffc809d6d9f205e0e4",
+    urls = ["https://github.com/jmhodges/bazel_gomock/archive/5b73edb74e569ff404b3beffc809d6d9f205e0e4.tar.gz"],
+)
+
+http_archive(
     name = "bazel_toolchains",
     sha256 = "4329663fe6c523425ad4d3c989a8ac026b04e1acedeceb56aa4b190fa7f3973c",
     strip_prefix = "bazel-toolchains-bc09b995c137df042bb80a395b73d7ce6f26afbe",
@@ -165,4 +172,16 @@ go_repository(
     name = "com_github_bazelbuild_remote_apis",
     commit = "6130f7e23ae157d5cf12c5d6af325a1dae57e235",
     importpath = "github.com/bazelbuild/remote-apis",
+)
+
+go_repository(
+    name = "com_github_golang_mock",
+    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
+    importpath = "github.com/golang/mock",
+)
+
+go_repository(
+    name = "com_github_stretchr_testify",
+    commit = "04af85275a5c7ac09d16bb3b9b2e751ed45154e5",
+    importpath = "github.com/stretchr/testify",
 )

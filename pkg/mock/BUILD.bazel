@@ -1,0 +1,53 @@
+# gazelle:ignore
+
+load("@bazel_gomock//:gomock.bzl", "gomock")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+gomock(
+    name = "ac",
+    out = "ac.go",
+    interfaces = ["ActionCache"],
+    library = "//pkg/ac:go_default_library",
+    package = "mock",
+)
+
+gomock(
+    name = "blobstore",
+    out = "blobstore.go",
+    interfaces = ["BlobAccess"],
+    library = "//pkg/blobstore:go_default_library",
+    package = "mock",
+)
+
+gomock(
+    name = "builder",
+    out = "builder.go",
+    interfaces = ["BuildExecutor"],
+    library = "//pkg/builder:go_default_library",
+    package = "mock",
+)
+
+gomock(
+    name = "cas",
+    out = "cas.go",
+    interfaces = ["ContentAddressableStorage"],
+    library = "//pkg/cas:go_default_library",
+    package = "mock",
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        ":ac.go",
+        ":blobstore.go",
+        ":builder.go",
+        ":cas.go",
+    ],
+    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/mock",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/util:go_default_library",
+        "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
+        "@com_github_golang_mock//gomock:go_default_library",
+    ],
+)
