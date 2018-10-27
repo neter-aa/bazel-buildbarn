@@ -48,6 +48,7 @@ func (ba *redisBlobAccess) Get(ctx context.Context, instance string, digest *rem
 
 func (ba *redisBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 	if err := ctx.Err(); err != nil {
+		r.Close()
 		return err
 	}
 	value, err := ioutil.ReadAll(r)

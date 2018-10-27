@@ -55,6 +55,7 @@ func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *re
 	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHash())
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
+		r.Close()
 		return err
 	}
 	req.ContentLength = sizeBytes
