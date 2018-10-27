@@ -3,29 +3,30 @@ package blobstore
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
 	"log"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 // extractDigest validates the format of fields in a Digest object and returns them.
-func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, error) {
+func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, util.DigestFormat, error) {
 	checksum, err := hex.DecodeString(digest.Hash)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
-	if len(checksum) != sha256.Size {
-		return nil, 0, fmt.Errorf("Expected checksum to be %d bytes; not %d", sha256.Size, len(checksum))
+	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
+	if err != nil {
+		return nil, 0, nil, err
 	}
 	if digest.SizeBytes < 0 {
-		return nil, 0, fmt.Errorf("Invalid negative size: %d", digest.SizeBytes)
+		return nil, 0, nil, fmt.Errorf("Invalid negative size: %d", digest.SizeBytes)
 	}
-	return checksum, digest.SizeBytes, nil
+	return checksum, digest.SizeBytes, digestFormat, nil
 }
 
 type merkleBlobAccess struct {
@@ -44,14 +45,14 @@ func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 }
 
 func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
-	checksum, size, err := extractDigest(digest)
+	checksum, size, digestFormat, err := extractDigest(digest)
 	if err != nil {
 		return &errorReader{err: err}
 	}
 	return &checksumValidatingReader{
 		ReadCloser:       ba.blobAccess.Get(ctx, instance, digest),
 		expectedChecksum: checksum,
-		partialChecksum:  sha256.New(),
+		partialChecksum:  digestFormat(),
 		sizeLeft:         size,
 		invalidator: func() {
 			// Trigger blob deletion in case we detect data
@@ -68,7 +69,7 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 }
 
 func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
-	checksum, digestSizeBytes, err := extractDigest(digest)
+	checksum, digestSizeBytes, digestFormat, err := extractDigest(digest)
 	if err != nil {
 		r.Close()
 		return err
@@ -80,14 +81,14 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 	return ba.blobAccess.Put(ctx, instance, digest, sizeBytes, &checksumValidatingReader{
 		ReadCloser:       r,
 		expectedChecksum: checksum,
-		partialChecksum:  sha256.New(),
+		partialChecksum:  digestFormat(),
 		sizeLeft:         sizeBytes,
 		invalidator:      func() {},
 	})
 }
 
 func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
-	_, _, err := extractDigest(digest)
+	_, _, _, err := extractDigest(digest)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest 
 
 func (ba *merkleBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	for _, digest := range digests {
-		_, _, err := extractDigest(digest)
+		_, _, _, err := extractDigest(digest)
 		if err != nil {
 			return nil, err
 		}

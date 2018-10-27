@@ -3,6 +3,7 @@ package cas
 import (
 	"context"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
@@ -13,6 +14,6 @@ type ContentAddressableStorage interface {
 	GetCommand(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Command, error)
 	GetDirectory(ctx context.Context, instance string, digest *remoteexecution.Digest) (*remoteexecution.Directory, error)
 	GetFile(ctx context.Context, instance string, digest *remoteexecution.Digest, outputPath string, isExecutable bool) error
-	PutFile(ctx context.Context, instance string, path string) (*remoteexecution.Digest, bool, error)
-	PutTree(ctx context.Context, instance string, tree *remoteexecution.Tree) (*remoteexecution.Digest, error)
+	PutFile(ctx context.Context, instance string, path string, digestFormat util.DigestFormat) (*remoteexecution.Digest, bool, error)
+	PutTree(ctx context.Context, instance string, tree *remoteexecution.Tree, digestFormat util.DigestFormat) (*remoteexecution.Digest, error)
 }

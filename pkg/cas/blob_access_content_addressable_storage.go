@@ -90,7 +90,7 @@ func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, ins
 	return err
 }
 
-func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, instance string, path string) (*remoteexecution.Digest, bool, error) {
+func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, instance string, path string, digestFormat util.DigestFormat) (*remoteexecution.Digest, bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, false, err
@@ -104,7 +104,7 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 	}
 
 	// Walk through the file to compute the digest.
-	digest, err := util.DigestFromReader(file)
+	digest, err := util.DigestFromReader(file, digestFormat)
 	if err != nil {
 		file.Close()
 		return nil, false, err
@@ -121,12 +121,12 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, ins
 	return digest, (info.Mode() & 0111) != 0, nil
 }
 
-func (cas *blobAccessContentAddressableStorage) PutTree(ctx context.Context, instance string, tree *remoteexecution.Tree) (*remoteexecution.Digest, error) {
+func (cas *blobAccessContentAddressableStorage) PutTree(ctx context.Context, instance string, tree *remoteexecution.Tree, digestFormat util.DigestFormat) (*remoteexecution.Digest, error) {
 	data, err := proto.Marshal(tree)
 	if err != nil {
 		return nil, err
 	}
-	digest := util.DigestFromData(data)
+	digest := util.DigestFromData(data, digestFormat)
 	if err := cas.blobAccess.Put(ctx, instance, digest, int64(len(data)), ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
 		return nil, err
 	}
