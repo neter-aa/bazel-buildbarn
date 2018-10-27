@@ -52,6 +52,12 @@ func (ba *remoteBlobAccess) Get(ctx context.Context, instance string, digest *re
 }
 
 func (ba *remoteBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+	if sizeBytes == 0 {
+		// Force the transmission of the Content-Length header,
+		// even if the blob is empty by using http.NoBody.
+		r.Close()
+		r = http.NoBody
+	}
 	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHash())
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
