@@ -18,6 +18,8 @@ import (
 
 	"google.golang.org/genproto/googleapis/bytestream"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type stringList []string
@@ -70,7 +72,13 @@ func main() {
 		}
 		schedulers[components[0]] = builder.NewForwardingBuildQueue(scheduler)
 	}
-	buildQueue := builder.NewDemultiplexingBuildQueue(schedulers)
+	buildQueue := builder.NewDemultiplexingBuildQueue(func(instance string) (remoteexecution.ExecutionServer, error) {
+		scheduler, ok := schedulers[instance]
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Unknown instance name")
+		}
+		return scheduler, nil
+	})
 
 	// RPC server.
 	s := grpc.NewServer(

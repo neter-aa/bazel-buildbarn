@@ -12,7 +12,7 @@ import (
 )
 
 type demultiplexingBuildQueue struct {
-	backends map[string]remoteexecution.ExecutionServer
+	getBackend func(string) (remoteexecution.ExecutionServer, error)
 }
 
 // NewDemultiplexingBuildQueue creates an adapter for the Execution
@@ -20,9 +20,9 @@ type demultiplexingBuildQueue struct {
 // instance given in requests. Job identifiers returned by backends are
 // prefixed with the instance name, so that successive requests may
 // demultiplex the requests later on.
-func NewDemultiplexingBuildQueue(backends map[string]remoteexecution.ExecutionServer) remoteexecution.ExecutionServer {
+func NewDemultiplexingBuildQueue(getBackend func(string) (remoteexecution.ExecutionServer, error)) remoteexecution.ExecutionServer {
 	return &demultiplexingBuildQueue{
-		backends: backends,
+		getBackend: getBackend,
 	}
 }
 
@@ -30,9 +30,9 @@ func (bq *demultiplexingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, 
 	if strings.ContainsRune(in.InstanceName, '|') {
 		return status.Errorf(codes.InvalidArgument, "Instance name cannot contain pipe character")
 	}
-	backend, ok := bq.backends[in.InstanceName]
-	if !ok {
-		return status.Errorf(codes.InvalidArgument, "Unknown instance name")
+	backend, err := bq.getBackend(in.InstanceName)
+	if err != nil {
+		return err
 	}
 	return backend.Execute(in, &operationNamePrepender{
 		Execution_ExecuteServer: out,
@@ -45,9 +45,9 @@ func (bq *demultiplexingBuildQueue) WaitExecution(in *remoteexecution.WaitExecut
 	if len(target) != 2 {
 		return status.Errorf(codes.InvalidArgument, "Unable to extract instance name from watch request")
 	}
-	backend, ok := bq.backends[target[0]]
-	if !ok {
-		return status.Errorf(codes.InvalidArgument, "Unknown instance name")
+	backend, err := bq.getBackend(target[0])
+	if err != nil {
+		return err
 	}
 	requestCopy := *in
 	requestCopy.Name = target[1]
