@@ -2,7 +2,6 @@ package blobstore
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -122,7 +121,7 @@ func (r *byteStreamWriteServerReader) setRequest(request *bytestream.WriteReques
 		return status.Error(codes.InvalidArgument, "Client closed stream twice")
 	}
 	if request.WriteOffset != r.writeOffset {
-		return fmt.Errorf("Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
+		return status.Errorf(codes.InvalidArgument, "Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
 	}
 
 	r.writeOffset += int64(len(request.Data))

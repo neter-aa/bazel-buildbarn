@@ -73,6 +73,17 @@ func TestExistenceByteStreamServer(t *testing.T) {
 		require.NoError(t, r.Close())
 		return err
 	})
+	blobAccess.EXPECT().Put(gomock.Any(), "windows10", &remoteexecution.Digest{
+		Hash:      "68e109f0f40ca72a15e05cc22786f8e6",
+		SizeBytes: 10,
+	}, int64(10), gomock.Any()).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+		_, err := ioutil.ReadAll(r)
+		s := status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, "Attempted to write at offset 4, while 5 was expected", s.Message())
+		require.NoError(t, r.Close())
+		return err
+	})
 
 	// Create an RPC server/client pair.
 	l := bufconn.Listen(1 << 20)
@@ -195,7 +206,22 @@ func TestExistenceByteStreamServer(t *testing.T) {
 	require.Equal(t, codes.InvalidArgument, s.Code())
 	require.Equal(t, "Client closed stream twice", s.Message())
 
-	// TODO(edsch): Add testing coverage for invalid WriteOffset.
+	// Attempted to write with a bad write offset.
+	stream, err = client.Write(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		ResourceName: "windows10/uploads/d834d9c2-f3c9-4f30-a698-75fd4be9470d/blobs/68e109f0f40ca72a15e05cc22786f8e6/10",
+		Data:         []byte("Hello"),
+	}))
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		Data:        []byte("World"),
+		WriteOffset: 4,
+		FinishWrite: true,
+	}))
+	_, err = stream.CloseAndRecv()
+	s = status.Convert(err)
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Attempted to write at offset 4, while 5 was expected", s.Message())
 }
 
 // TODO(edsch): Add testing coverage QueryWriteStatus()?
