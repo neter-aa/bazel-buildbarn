@@ -222,6 +222,11 @@ func TestExistenceByteStreamServer(t *testing.T) {
 	s = status.Convert(err)
 	require.Equal(t, codes.InvalidArgument, s.Code())
 	require.Equal(t, "Attempted to write at offset 4, while 5 was expected", s.Message())
-}
 
-// TODO(edsch): Add testing coverage QueryWriteStatus()?
+	_, err = client.QueryWriteStatus(ctx, &bytestream.QueryWriteStatusRequest{
+		ResourceName: "windows10/uploads/d834d9c2-f3c9-4f30-a698-75fd4be9470d/blobs/68e109f0f40ca72a15e05cc22786f8e6/10",
+	})
+	s = status.Convert(err)
+	require.Equal(t, codes.Unimplemented, s.Code())
+	require.Equal(t, "This service does not support querying write status", s.Message())
+}
