@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-func TestExistenceByteStreamServerRead(t *testing.T) {
+func TestExistenceByteStreamServer(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
 
@@ -40,6 +40,17 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 		Hash:      "09f34d28e9c8bb445ec996388968a9e8",
 		SizeBytes: 7,
 	}).Return(util.NewErrorReader(status.Error(codes.NotFound, "Blob not found")))
+
+	blobAccess.EXPECT().Put(gomock.Any(), "", &remoteexecution.Digest{
+		Hash:      "94876e5b1ce62c7b2b5ff6e661624841",
+		SizeBytes: 14,
+	}, int64(14), gomock.Any()).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+		buf, err := ioutil.ReadAll(r)
+		require.NoError(t, err)
+		require.Equal(t, []byte("LaputanMachine"), buf)
+		require.NoError(t, r.Close())
+		return nil
+	})
 
 	// Create an RPC server/client pair.
 	l := bufconn.Listen(1 << 20)
@@ -103,6 +114,37 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 	s = status.Convert(err)
 	require.Equal(t, codes.NotFound, s.Code())
 	require.Equal(t, "Blob not found", s.Message())
+
+	// Attempt to write to a bad resource name.
+	stream, err := client.Write(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		ResourceName: "This is an incorrect resource name",
+		Data:         []byte("Bleep bloop!"),
+	}))
+	_, err = stream.CloseAndRecv()
+	s = status.Convert(err)
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Invalid resource naming scheme", s.Message())
+
+	// Attempt to write a blob without an instance name.
+	stream, err = client.Write(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		ResourceName: "uploads/7de747e0-ab6b-4d83-90cb-11989f84c473/blobs/94876e5b1ce62c7b2b5ff6e661624841/14",
+		Data:         []byte("Laputan"),
+	}))
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		Data:        []byte("Machine"),
+		WriteOffset: 7,
+		FinishWrite: true,
+	}))
+	response, err := stream.CloseAndRecv()
+	require.NoError(t, err)
+	require.Equal(t, int64(14), response.CommittedSize)
+
+	// TODO(edsch): Add testing coverage for invalid WriteOffset,
+	// lack of FinishWrite, etc.
 }
 
-// TODO(edsch): Add testing coverage for Write() and QueryWriteStatus().
+// TODO(edsch): Add testing coverage QueryWriteStatus()?
