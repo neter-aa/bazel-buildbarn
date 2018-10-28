@@ -117,28 +117,23 @@ type byteStreamWriteServerReader struct {
 }
 
 func (r *byteStreamWriteServerReader) Read(p []byte) (int, error) {
-	n := 0
-	for {
-		// Copy data from previously read partial chunk.
-		c := copy(p, r.data)
-		p = p[c:]
-		r.data = r.data[c:]
-		n += c
-		if len(p) == 0 {
-			return n, nil
-		}
-
-		// Read next chunk.
+	// Read next chunk if no data is present.
+	if len(r.data) == 0 {
 		request, err := r.stream.Recv()
 		if err != nil {
-			return n, err
+			return 0, err
 		}
 		if request.WriteOffset != r.writeOffset {
-			return n, fmt.Errorf("Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
+			return 0, fmt.Errorf("Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
 		}
 		r.writeOffset += int64(len(request.Data))
 		r.data = request.Data
 	}
+
+	// Copy data from previously read partial chunk.
+	c := copy(p, r.data)
+	r.data = r.data[c:]
+	return c, nil
 }
 
 func (r *byteStreamWriteServerReader) Close() error {
@@ -154,10 +149,15 @@ func (s *byteStreamServer) Write(stream bytestream.ByteStream_WriteServer) error
 	if digest == nil {
 		return status.Errorf(codes.InvalidArgument, "Invalid resource naming scheme")
 	}
-	return s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, &byteStreamWriteServerReader{
+	if err := s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, &byteStreamWriteServerReader{
 		stream:      stream,
 		writeOffset: int64(len(request.Data)),
 		data:        request.Data,
+	}); err != nil {
+		return err
+	}
+	return stream.SendAndClose(&bytestream.WriteResponse{
+		CommittedSize: digest.SizeBytes,
 	})
 }
 
