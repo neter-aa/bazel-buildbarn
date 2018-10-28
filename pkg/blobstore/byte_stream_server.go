@@ -15,10 +15,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const (
-	readChunkSize = 1 << 16
-)
-
 // parseResourceNameRead parses resource name strings in one of the following two forms:
 //
 // - blobs/${hash}/${size}
@@ -72,15 +68,17 @@ func parseResourceNameWrite(resourceName string) (string, *remoteexecution.Diges
 }
 
 type byteStreamServer struct {
-	blobAccess BlobAccess
+	blobAccess    BlobAccess
+	readChunkSize int
 }
 
 // NewByteStreamServer creates a GRPC service for reading blobs from and
 // writing blobs to a BlobAccess. It is used by Bazel to access the
 // Content Addressable Storage (CAS).
-func NewByteStreamServer(blobAccess BlobAccess) bytestream.ByteStreamServer {
+func NewByteStreamServer(blobAccess BlobAccess, readChunkSize int) bytestream.ByteStreamServer {
 	return &byteStreamServer{
-		blobAccess: blobAccess,
+		blobAccess:    blobAccess,
+		readChunkSize: readChunkSize,
 	}
 }
 
@@ -97,8 +95,8 @@ func (s *byteStreamServer) Read(in *bytestream.ReadRequest, out bytestream.ByteS
 	defer r.Close()
 
 	for {
-		var readBuf [readChunkSize]byte
-		n, err := r.Read(readBuf[:])
+		readBuf := make([]byte, s.readChunkSize)
+		n, err := r.Read(readBuf)
 		if err != nil && err != io.EOF {
 			return err
 		}
