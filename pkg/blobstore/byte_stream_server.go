@@ -111,9 +111,24 @@ func (s *byteStreamServer) Read(in *bytestream.ReadRequest, out bytestream.ByteS
 }
 
 type byteStreamWriteServerReader struct {
-	stream      bytestream.ByteStream_WriteServer
-	writeOffset int64
-	data        []byte
+	stream        bytestream.ByteStream_WriteServer
+	writeOffset   int64
+	data          []byte
+	finishedWrite bool
+}
+
+func (r *byteStreamWriteServerReader) setRequest(request *bytestream.WriteRequest) error {
+	if r.finishedWrite {
+		return status.Error(codes.InvalidArgument, "Client closed stream twice")
+	}
+	if request.WriteOffset != r.writeOffset {
+		return fmt.Errorf("Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
+	}
+
+	r.writeOffset += int64(len(request.Data))
+	r.data = request.Data
+	r.finishedWrite = request.FinishWrite
+	return nil
 }
 
 func (r *byteStreamWriteServerReader) Read(p []byte) (int, error) {
@@ -121,13 +136,14 @@ func (r *byteStreamWriteServerReader) Read(p []byte) (int, error) {
 	if len(r.data) == 0 {
 		request, err := r.stream.Recv()
 		if err != nil {
+			if err == io.EOF && !r.finishedWrite {
+				return 0, status.Error(codes.InvalidArgument, "Client closed stream without finishing write")
+			}
 			return 0, err
 		}
-		if request.WriteOffset != r.writeOffset {
-			return 0, fmt.Errorf("Attempted to write at offset %d, while %d was expected", request.WriteOffset, r.writeOffset)
+		if err := r.setRequest(request); err != nil {
+			return 0, err
 		}
-		r.writeOffset += int64(len(request.Data))
-		r.data = request.Data
 	}
 
 	// Copy data from previously read partial chunk.
@@ -149,11 +165,11 @@ func (s *byteStreamServer) Write(stream bytestream.ByteStream_WriteServer) error
 	if digest == nil {
 		return status.Errorf(codes.InvalidArgument, "Invalid resource naming scheme")
 	}
-	if err := s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, &byteStreamWriteServerReader{
-		stream:      stream,
-		writeOffset: int64(len(request.Data)),
-		data:        request.Data,
-	}); err != nil {
+	r := &byteStreamWriteServerReader{stream: stream}
+	if err := r.setRequest(request); err != nil {
+		return err
+	}
+	if err := s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, r); err != nil {
 		return err
 	}
 	return stream.SendAndClose(&bytestream.WriteResponse{

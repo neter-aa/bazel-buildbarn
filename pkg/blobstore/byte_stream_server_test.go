@@ -51,6 +51,28 @@ func TestExistenceByteStreamServer(t *testing.T) {
 		require.NoError(t, r.Close())
 		return nil
 	})
+	blobAccess.EXPECT().Put(gomock.Any(), "", &remoteexecution.Digest{
+		Hash:      "f10e562d8825ec2e17e0d9f58646f8084a658cfa",
+		SizeBytes: 6,
+	}, int64(6), gomock.Any()).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+		_, err := ioutil.ReadAll(r)
+		s := status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, "Client closed stream without finishing write", s.Message())
+		require.NoError(t, r.Close())
+		return err
+	})
+	blobAccess.EXPECT().Put(gomock.Any(), "fedora28", &remoteexecution.Digest{
+		Hash:      "cbd8f7984c654c25512e3d9241ae569f",
+		SizeBytes: 3,
+	}, int64(3), gomock.Any()).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+		_, err := ioutil.ReadAll(r)
+		s := status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, "Client closed stream twice", s.Message())
+		require.NoError(t, r.Close())
+		return err
+	})
 
 	// Create an RPC server/client pair.
 	l := bufconn.Listen(1 << 20)
@@ -143,8 +165,37 @@ func TestExistenceByteStreamServer(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(14), response.CommittedSize)
 
-	// TODO(edsch): Add testing coverage for invalid WriteOffset,
-	// lack of FinishWrite, etc.
+	// Attempt to write without finishing properly.
+	stream, err = client.Write(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		ResourceName: "uploads/497a9982-9d2a-4a29-95b8-28bd971bce1d/blobs/f10e562d8825ec2e17e0d9f58646f8084a658cfa/6",
+		Data:         []byte("Foo"),
+	}))
+	_, err = stream.CloseAndRecv()
+	s = status.Convert(err)
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Client closed stream without finishing write", s.Message())
+
+	// Attempted to write while finishing twice.
+	stream, err = client.Write(ctx)
+	require.NoError(t, err)
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		ResourceName: "fedora28/uploads/d834d9c2-f3c9-4f30-a698-75fd4be9470d/blobs/cbd8f7984c654c25512e3d9241ae569f/3",
+		Data:         []byte("Foo"),
+		FinishWrite:  true,
+	}))
+	require.NoError(t, stream.Send(&bytestream.WriteRequest{
+		Data:        []byte("Bar"),
+		WriteOffset: 3,
+		FinishWrite: true,
+	}))
+	_, err = stream.CloseAndRecv()
+	s = status.Convert(err)
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Client closed stream twice", s.Message())
+
+	// TODO(edsch): Add testing coverage for invalid WriteOffset.
 }
 
 // TODO(edsch): Add testing coverage QueryWriteStatus()?
