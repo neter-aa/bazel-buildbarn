@@ -36,6 +36,7 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string) (BlobAccess, Bl
 	if err != nil {
 		return nil, nil, err
 	}
+	// TODO(edsch): Should the Action Cache also have some validating adapter?
 	return NewMetricsBlobAccess(NewMerkleBlobAccess(contentAddressableStorage), "cas_merkle"), actionCache, nil
 }
 
