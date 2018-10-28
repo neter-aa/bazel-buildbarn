@@ -44,19 +44,19 @@ func TestMerkleBlobAccessMalformedDigests(t *testing.T) {
 		require.Equal(t, errorMessage, err.Error())
 	}
 	testBadDigest(&remoteexecution.Digest{
-		Hash: "cafebabe",
+		Hash:      "cafebabe",
 		SizeBytes: 0,
 	}, "Unknown digest hash length: 8 characters")
 	testBadDigest(&remoteexecution.Digest{
-		Hash: "This is a sentence of 32 chars!!",
+		Hash:      "This is a sentence of 32 chars!!",
 		SizeBytes: 0,
 	}, "Non-hexadecimal character in digest hash: U+0054 'T'")
 	testBadDigest(&remoteexecution.Digest{
-		Hash: "89D5739BAABBBE65BE35CBE61C88E06D",
+		Hash:      "89D5739BAABBBE65BE35CBE61C88E06D",
 		SizeBytes: 0,
 	}, "Non-hexadecimal character in digest hash: U+0044 'D'")
 	testBadDigest(&remoteexecution.Digest{
-		Hash: "e811818f80d9c3c22d577ba83d6196788e553bb408535bb42105cdff726a60ab",
+		Hash:      "e811818f80d9c3c22d577ba83d6196788e553bb408535bb42105cdff726a60ab",
 		SizeBytes: -42,
 	}, "Invalid digest size: -42 bytes")
 }
