@@ -30,7 +30,7 @@ func DigestFormatFromLength(length int) (DigestFormat, error) {
 	case sha256.Size * 2:
 		return sha256.New, nil
 	default:
-		return nil, fmt.Errorf("Unknown digest format of length %d", length)
+		return nil, fmt.Errorf("Unknown digest hash length: %d characters", length)
 	}
 }
 

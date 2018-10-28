@@ -15,16 +15,26 @@ import (
 
 // extractDigest validates the format of fields in a Digest object and returns them.
 func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, util.DigestFormat, error) {
-	checksum, err := hex.DecodeString(digest.Hash)
-	if err != nil {
-		return nil, 0, nil, err
-	}
 	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
 	if err != nil {
 		return nil, 0, nil, err
 	}
+
+	// hex.DecodeString() also permits uppercase characters, which
+	// would lead to duplicate representations. Reject those
+	// explicitly prior to calling hex.DecodeString().
+	for _, c := range digest.Hash {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return nil, 0, nil, fmt.Errorf("Non-hexadecimal character in digest hash: %#U", c)
+		}
+	}
+	checksum, err := hex.DecodeString(digest.Hash)
+	if err != nil {
+		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
+	}
+
 	if digest.SizeBytes < 0 {
-		return nil, 0, nil, fmt.Errorf("Invalid negative size: %d", digest.SizeBytes)
+		return nil, 0, nil, fmt.Errorf("Invalid digest size: %d bytes", digest.SizeBytes)
 	}
 	return checksum, digest.SizeBytes, digestFormat, nil
 }
