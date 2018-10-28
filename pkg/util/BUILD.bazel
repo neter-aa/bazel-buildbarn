@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "digest.go",
         "digest_keyer.go",
+        "error_reader.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/util",
     visibility = ["//visibility:public"],

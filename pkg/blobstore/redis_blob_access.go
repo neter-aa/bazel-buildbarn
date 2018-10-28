@@ -30,18 +30,18 @@ func NewRedisBlobAccess(redisClient *redis.Client, blobKeyer util.DigestKeyer) B
 
 func (ba *redisBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
 	if err := ctx.Err(); err != nil {
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 	key, err := ba.blobKeyer(instance, digest)
 	if err != nil {
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 	value, err := ba.redisClient.Get(key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return &errorReader{err: status.Errorf(codes.NotFound, err.Error())}
+			return util.NewErrorReader(status.Errorf(codes.NotFound, err.Error()))
 		}
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 	return ioutil.NopCloser(bytes.NewBuffer(value))
 }

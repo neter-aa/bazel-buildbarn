@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 
 	"golang.org/x/net/context/ctxhttp"
@@ -38,16 +39,16 @@ func (ba *remoteBlobAccess) Get(ctx context.Context, instance string, digest *re
 	resp, err := ctxhttp.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		fmt.Printf("Error getting digest. %s\n", err)
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:
-		return &errorReader{err: status.Error(codes.NotFound, url)}
+		return util.NewErrorReader(status.Error(codes.NotFound, url))
 	case http.StatusOK:
 		return resp.Body
 	default:
-		return &errorReader{err: convertHTTPUnexpectedStatus(resp)}
+		return util.NewErrorReader(convertHTTPUnexpectedStatus(resp))
 	}
 }
 

@@ -47,7 +47,7 @@ func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
 	checksum, size, digestFormat, err := extractDigest(digest)
 	if err != nil {
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 	return &checksumValidatingReader{
 		ReadCloser:       ba.blobAccess.Get(ctx, instance, digest),

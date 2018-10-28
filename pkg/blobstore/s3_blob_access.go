@@ -47,14 +47,14 @@ func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName *string
 func (ba *s3BlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
 	key, err := ba.blobKeyer(instance, digest)
 	if err != nil {
-		return &errorReader{err: err}
+		return util.NewErrorReader(err)
 	}
 	result, err := ba.s3.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: ba.bucketName,
 		Key:    &key,
 	})
 	if err != nil {
-		return &errorReader{err: convertS3Error(err)}
+		return util.NewErrorReader(convertS3Error(err))
 	}
 	return result.Body
 }
