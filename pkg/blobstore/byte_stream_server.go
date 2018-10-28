@@ -2,7 +2,6 @@ package blobstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -89,7 +88,7 @@ func (s *byteStreamServer) Read(in *bytestream.ReadRequest, out bytestream.ByteS
 
 	instance, digest := parseResourceNameRead(in.ResourceName)
 	if digest == nil {
-		return errors.New("Unsupported resource naming scheme")
+		return status.Errorf(codes.InvalidArgument, "Invalid resource naming scheme")
 	}
 	r := s.blobAccess.Get(out.Context(), instance, digest)
 	defer r.Close()
@@ -153,7 +152,7 @@ func (s *byteStreamServer) Write(stream bytestream.ByteStream_WriteServer) error
 	}
 	instance, digest := parseResourceNameWrite(request.ResourceName)
 	if digest == nil {
-		return errors.New("Unsupported resource naming scheme")
+		return status.Errorf(codes.InvalidArgument, "Invalid resource naming scheme")
 	}
 	return s.blobAccess.Put(stream.Context(), instance, digest, digest.SizeBytes, &byteStreamWriteServerReader{
 		stream:      stream,
