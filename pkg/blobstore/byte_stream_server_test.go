@@ -96,7 +96,7 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 
 	// Attempt to fetch a nonexistent blob.
 	req, err = client.Read(ctx, &bytestream.ReadRequest{
-		ResourceName: "fedora28/blobs/09f34d28e9c8bb445ec996388968a9e8/7",
+		ResourceName: "///fedora28//blobs/09f34d28e9c8bb445ec996388968a9e8/////7/",
 	})
 	require.NoError(t, err)
 	_, err = req.Recv()
