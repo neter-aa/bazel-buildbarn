@@ -59,7 +59,6 @@ func TestExistencePreconditionBlobAccessGetResourceExhausted(t *testing.T) {
 			SizeBytes: 8,
 		})
 	_, err := ioutil.ReadAll(r)
-	require.Error(t, err)
 	s := status.Convert(err)
 	require.Equal(t, codes.ResourceExhausted, s.Code())
 	require.Equal(t, "Out of luck!", s.Message())
@@ -85,7 +84,6 @@ func TestExistencePreconditionBlobAccessGetNotFound(t *testing.T) {
 			SizeBytes: 7,
 		})
 	_, err := ioutil.ReadAll(r)
-	require.Error(t, err)
 	s := status.Convert(err)
 	require.Equal(t, codes.FailedPrecondition, s.Code())
 	require.Equal(t, "Blob doesn't exist!", s.Message())
@@ -112,7 +110,6 @@ func TestExistencePreconditionBlobAccessPutNotFound(t *testing.T) {
 			Hash:      "89d5739baabbbe65be35cbe61c88e06d",
 			SizeBytes: 6,
 		}, 6, ioutil.NopCloser(bytes.NewBufferString("Foobar")))
-	require.Error(t, err)
 	s := status.Convert(err)
 	require.Equal(t, codes.NotFound, s.Code())
 	require.Equal(t, "Storage backend not found", s.Message())
