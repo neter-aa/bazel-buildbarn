@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -35,19 +36,23 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 		Hash:      "3538d378083b9afa5ffad767f7269509",
 		SizeBytes: 22,
 	}).Return(ioutil.NopCloser(bytes.NewBufferString("This is a long message")))
+	blobAccess.EXPECT().Get(gomock.Any(), "fedora28", &remoteexecution.Digest{
+		Hash:      "09f34d28e9c8bb445ec996388968a9e8",
+		SizeBytes: 7,
+	}).Return(util.NewErrorReader(status.Error(codes.NotFound, "Blob not found")))
 
 	// Create an RPC server/client pair.
 	l := bufconn.Listen(1 << 20)
-	s := grpc.NewServer()
-	bytestream.RegisterByteStreamServer(s, NewByteStreamServer(blobAccess, 10))
+	server := grpc.NewServer()
+	bytestream.RegisterByteStreamServer(server, NewByteStreamServer(blobAccess, 10))
 	go func() {
-		require.NoError(t, s.Serve(l))
+		require.NoError(t, server.Serve(l))
 	}()
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithDialer(func(string, time.Duration) (net.Conn, error) {
 		return l.Dial()
 	}), grpc.WithInsecure())
 	require.NoError(t, err)
-	defer s.Stop()
+	defer server.Stop()
 	defer conn.Close()
 	client := bytestream.NewByteStreamClient(conn)
 
@@ -57,9 +62,9 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 	_, err = req.Recv()
-	status := status.Convert(err)
-	require.Equal(t, codes.InvalidArgument, status.Code())
-	require.Equal(t, "Invalid resource naming scheme", status.Message())
+	s := status.Convert(err)
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Invalid resource naming scheme", s.Message())
 
 	// Attempt to fetch the small blob without an instance name.
 	req, err = client.Read(ctx, &bytestream.ReadRequest{
@@ -88,6 +93,16 @@ func TestExistenceByteStreamServerRead(t *testing.T) {
 	require.Equal(t, []byte("ge"), readResponse.Data)
 	_, err = req.Recv()
 	require.Equal(t, io.EOF, err)
+
+	// Attempt to fetch a nonexistent blob.
+	req, err = client.Read(ctx, &bytestream.ReadRequest{
+		ResourceName: "fedora28/blobs/09f34d28e9c8bb445ec996388968a9e8/7",
+	})
+	require.NoError(t, err)
+	_, err = req.Recv()
+	s = status.Convert(err)
+	require.Equal(t, codes.NotFound, s.Code())
+	require.Equal(t, "Blob not found", s.Message())
 }
 
 // TODO(edsch): Add testing coverage for Write() and QueryWriteStatus().
