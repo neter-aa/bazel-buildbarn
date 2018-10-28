@@ -79,7 +79,7 @@ func main() {
 	)
 	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache, *actionCacheAllowUpdates))
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
-	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess, 1 << 16))
+	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess, 1<<16))
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s)
