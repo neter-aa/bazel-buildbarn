@@ -127,7 +127,7 @@ func (cas *blobAccessContentAddressableStorage) PutTree(ctx context.Context, ins
 		return nil, err
 	}
 	digest := util.DigestFromData(data, digestFormat)
-	if err := cas.blobAccess.Put(ctx, instance, digest, int64(len(data)), ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+	if err := cas.blobAccess.Put(ctx, instance, digest, digest.SizeBytes, ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
 		return nil, err
 	}
 	return digest, nil
