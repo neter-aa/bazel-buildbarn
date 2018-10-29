@@ -92,7 +92,7 @@ func TestMerkleBlobAccessMalformedDigests(t *testing.T) {
 		require.NoError(t, r.Close())
 
 		err = blobAccess.Put(
-			ctx, "freebsd12", digest, 5,
+			ctx, "freebsd12", digest, digest.SizeBytes,
 			ioutil.NopCloser(bytes.NewBufferString("Hello")))
 		s = status.Convert(err)
 		require.Equal(t, codes.InvalidArgument, s.Code())
