@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"fmt"
 	"hash"
 	"io"
 	"log"
@@ -88,15 +87,14 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 		r.Close()
 		return err
 	}
-	if sizeBytes != digestSizeBytes {
-		r.Close()
-		return fmt.Errorf("Attempted to put object of size %d, whereas the digest contains size %d", sizeBytes, digestSizeBytes)
+	if digestSizeBytes != sizeBytes {
+		log.Fatal("Called into CAS to store non-CAS object")
 	}
-	return ba.blobAccess.Put(ctx, instance, digest, sizeBytes, &checksumValidatingReader{
+	return ba.blobAccess.Put(ctx, instance, digest, digestSizeBytes, &checksumValidatingReader{
 		ReadCloser:       r,
 		expectedChecksum: checksum,
 		partialChecksum:  digestFormat(),
-		sizeLeft:         sizeBytes,
+		sizeLeft:         digestSizeBytes,
 		invalidator:      func() {},
 		errorCode:        codes.InvalidArgument,
 	})
