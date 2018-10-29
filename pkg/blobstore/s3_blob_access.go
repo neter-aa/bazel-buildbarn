@@ -27,36 +27,22 @@ func convertS3Error(err error) error {
 }
 
 type s3BlobAccess struct {
-	s3         *s3.S3
-	uploader   *s3manager.Uploader
-	bucketName *string
-	blobKeyer  util.DigestKeyer
+	s3                  *s3.S3
+	uploader            *s3manager.Uploader
+	bucketName          *string
+	underlyingBlobKeyer util.DigestKeyer
+	keyPrefix           *string
 }
 
 // NewS3BlobAccess creates a BlobAccess that uses an S3 bucket as its backing
 // store.
 func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName, keyPrefix *string, blobKeyer util.DigestKeyer) BlobAccess {
 	return &s3BlobAccess{
-		s3:         s3,
-		uploader:   uploader,
-		bucketName: bucketName,
-		blobKeyer:  prefixedKeyer(*keyPrefix, blobKeyer),
-	}
-}
-
-func prefixedKeyer(keyPrefix string, underlyingKeyer util.DigestKeyer) util.DigestKeyer {
-	if len(keyPrefix) == 0 {
-		return underlyingKeyer
-	}
-	if keyPrefix[len(keyPrefix)-1] != '/' {
-		keyPrefix += "/"
-	}
-	return func(instance string, digest *remoteexecution.Digest) (string, error) {
-		key, err := underlyingKeyer(instance, digest)
-		if err == nil {
-			return keyPrefix + key, nil
-		}
-		return key, err
+		s3:                  s3,
+		uploader:            uploader,
+		bucketName:          bucketName,
+		underlyingBlobKeyer: blobKeyer,
+		keyPrefix:           keyPrefix,
 	}
 }
 
@@ -122,4 +108,12 @@ func (ba *s3BlobAccess) FindMissing(ctx context.Context, instance string, digest
 		}
 	}
 	return missing, nil
+}
+
+func (ba *s3BlobAccess) blobKeyer(instance string, digest *remoteexecution.Digest) (string, error) {
+	key, err := ba.underlyingBlobKeyer(instance, digest)
+	if err != nil {
+		return "", err
+	}
+	return ba.keyPrefix + key, nil
 }

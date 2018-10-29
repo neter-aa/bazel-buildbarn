@@ -64,7 +64,8 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			DisableSSL:       &backend.S3.DisableSsl,
 			S3ForcePathStyle: aws.Bool(true),
 		}
-		//if AccessKeyId isn't specified, allow AWS to search for credentials. In AWS EC2, this search will include the instance IAM Role.
+		// If AccessKeyId isn't specified, allow AWS to search for credentials.
+		// In AWS EC2, this search will include the instance IAM Role.
 		if backend.S3.AccessKeyId != "" {
 			cfg.Credentials = credentials.NewStaticCredentials(backend.S3.AccessKeyId, backend.S3.SecretAccessKey, "")
 		}

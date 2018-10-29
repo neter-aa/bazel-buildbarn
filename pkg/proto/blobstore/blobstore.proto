@@ -61,8 +61,8 @@ message S3BlobAccessConfiguration {
     // Name of the S3 bucket.
     string bucket = 6;
 
-	// Prefix for keys, e.g. 'bazel_cas/'.
-	string key_prefix = 7;
+    // Prefix for keys, e.g. 'bazel_cas/'.
+    string key_prefix = 7;
 }
 
 message SizeDistinguishingeBlobAccessConfiguration {
