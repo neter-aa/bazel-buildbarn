@@ -11,6 +11,9 @@ import (
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestMerkleBlobAccessSuccess(t *testing.T) {
@@ -83,24 +86,28 @@ func TestMerkleBlobAccessMalformedDigests(t *testing.T) {
 	testBadDigest := func(digest *remoteexecution.Digest, errorMessage string) {
 		r := blobAccess.Get(ctx, "windows10", digest)
 		_, err := ioutil.ReadAll(r)
-		require.Error(t, err)
-		require.Equal(t, errorMessage, err.Error())
+		s := status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, errorMessage, s.Message())
 		require.NoError(t, r.Close())
 
 		err = blobAccess.Put(
 			ctx, "freebsd12", digest, 5,
 			ioutil.NopCloser(bytes.NewBufferString("Hello")))
-		require.Error(t, err)
-		require.Equal(t, errorMessage, err.Error())
+		s = status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, errorMessage, s.Message())
 
 		err = blobAccess.Delete(ctx, "macos", digest)
-		require.Error(t, err)
-		require.Equal(t, errorMessage, err.Error())
+		s = status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, errorMessage, s.Message())
 
 		_, err = blobAccess.FindMissing(
 			ctx, "debian8", []*remoteexecution.Digest{digest})
-		require.Error(t, err)
-		require.Equal(t, errorMessage, err.Error())
+		s = status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, errorMessage, s.Message())
 	}
 	testBadDigest(&remoteexecution.Digest{
 		Hash:      "cafebabe",

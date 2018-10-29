@@ -5,13 +5,15 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"hash"
 	"io"
 	"log"
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // DigestFormat acts as a factory for constructing hashers of a certain type.
@@ -30,7 +32,7 @@ func DigestFormatFromLength(length int) (DigestFormat, error) {
 	case sha256.Size * 2:
 		return sha256.New, nil
 	default:
-		return nil, fmt.Errorf("Unknown digest hash length: %d characters", length)
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown digest hash length: %d characters", length)
 	}
 }
 

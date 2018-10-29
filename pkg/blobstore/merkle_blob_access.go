@@ -11,6 +11,9 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // extractDigest validates the format of fields in a Digest object and returns them.
@@ -25,7 +28,7 @@ func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, util.DigestFo
 	// explicitly prior to calling hex.DecodeString().
 	for _, c := range digest.Hash {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return nil, 0, nil, fmt.Errorf("Non-hexadecimal character in digest hash: %#U", c)
+			return nil, 0, nil, status.Errorf(codes.InvalidArgument, "Non-hexadecimal character in digest hash: %#U", c)
 		}
 	}
 	checksum, err := hex.DecodeString(digest.Hash)
@@ -34,7 +37,7 @@ func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, util.DigestFo
 	}
 
 	if digest.SizeBytes < 0 {
-		return nil, 0, nil, fmt.Errorf("Invalid digest size: %d bytes", digest.SizeBytes)
+		return nil, 0, nil, status.Errorf(codes.InvalidArgument, "Invalid digest size: %d bytes", digest.SizeBytes)
 	}
 	return checksum, digest.SizeBytes, digestFormat, nil
 }
