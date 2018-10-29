@@ -78,6 +78,7 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 				log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
 			}
 		},
+		errorCode: codes.Internal,
 	}
 }
 
@@ -97,6 +98,7 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 		partialChecksum:  digestFormat(),
 		sizeLeft:         sizeBytes,
 		invalidator:      func() {},
+		errorCode:        codes.InvalidArgument,
 	})
 }
 
@@ -127,6 +129,7 @@ type checksumValidatingReader struct {
 
 	// Called whenever size/checksum inconsistencies are detected.
 	invalidator func()
+	errorCode   codes.Code
 }
 
 func (r *checksumValidatingReader) Read(p []byte) (int, error) {
@@ -134,20 +137,21 @@ func (r *checksumValidatingReader) Read(p []byte) (int, error) {
 	nLen := int64(n)
 	if nLen > r.sizeLeft {
 		r.invalidator()
-		return 0, fmt.Errorf("Blob is %d bytes longer than expected", nLen-r.sizeLeft)
+		return 0, status.Error(r.errorCode, "Blob is longer than expected")
 	}
 	r.sizeLeft -= nLen
 
 	if err == io.EOF {
 		if r.sizeLeft != 0 {
 			r.invalidator()
-			return 0, fmt.Errorf("Blob is %d bytes shorter than expected", r.sizeLeft)
+			return 0, status.Errorf(r.errorCode, "Blob is %d bytes shorter than expected", r.sizeLeft)
 		}
 
 		actualChecksum := r.partialChecksum.Sum(nil)
 		if bytes.Compare(actualChecksum, r.expectedChecksum) != 0 {
 			r.invalidator()
-			return 0, fmt.Errorf(
+			return 0, status.Errorf(
+				r.errorCode,
 				"Checksum of blob is %s, while %s was expected",
 				hex.EncodeToString(actualChecksum),
 				hex.EncodeToString(r.expectedChecksum))

@@ -27,7 +27,7 @@ func TestMerkleBlobAccessSuccess(t *testing.T) {
 			ctx, "windows10", digest,
 		).Return(ioutil.NopCloser(bytes.NewBuffer(body)))
 		bottomBlobAccess.EXPECT().Put(
-			ctx, "fedora28", digest, int64(len(body)), gomock.Any(),
+			ctx, "fedora28", digest, digest.SizeBytes, gomock.Any(),
 		).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 			buf, err := ioutil.ReadAll(r)
 			require.NoError(t, err)
@@ -51,8 +51,8 @@ func TestMerkleBlobAccessSuccess(t *testing.T) {
 		require.NoError(t, r.Close())
 
 		require.NoError(t, blobAccess.Put(
-			ctx, "fedora28", digest,
-			int64(len(body)), ioutil.NopCloser(bytes.NewBuffer(body))))
+			ctx, "fedora28", digest, digest.SizeBytes,
+			ioutil.NopCloser(bytes.NewBuffer(body))))
 
 		require.NoError(t, blobAccess.Delete(ctx, "ubuntu1804", digest))
 
@@ -127,4 +127,91 @@ func TestMerkleBlobAccessMalformedDigests(t *testing.T) {
 	}, "Invalid digest size: -42 bytes")
 }
 
-// TODO(edsch): Test corrupted data.
+func TestMerkleBlobAccessMalformedData(t *testing.T) {
+	ctrl, ctx := gomock.WithContext(context.Background(), t)
+	defer ctrl.Finish()
+
+	testBadData := func(digest *remoteexecution.Digest, body []byte, errorMessage string) {
+		bottomBlobAccess := mock.NewMockBlobAccess(ctrl)
+
+		// A Get() call yielding corrupted data should also
+		// trigger a Delete() call on the storage backend, so
+		// that inconsistencies are automatically repaired.
+		bottomBlobAccess.EXPECT().Get(
+			ctx, "freebsd11", digest,
+		).Return(ioutil.NopCloser(bytes.NewBuffer(body)))
+		bottomBlobAccess.EXPECT().Delete(
+			ctx, "freebsd11", digest,
+		).Return(nil)
+
+		// A Put() call for uploading broken data does not
+		// trigger a Delete(). If broken data ends up being
+		// stored, future Get() calls will repair it for us.
+		bottomBlobAccess.EXPECT().Put(
+			ctx, "fedora28", digest, digest.SizeBytes, gomock.Any(),
+		).DoAndReturn(func(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
+			_, err := ioutil.ReadAll(r)
+			s := status.Convert(err)
+			require.Equal(t, codes.InvalidArgument, s.Code())
+			require.Equal(t, errorMessage, s.Message())
+			require.NoError(t, r.Close())
+			return err
+		})
+
+		blobAccess := NewMerkleBlobAccess(bottomBlobAccess)
+
+		// A Get() call on corrupt data should trigger an
+		// internal error on the server.
+		r := blobAccess.Get(ctx, "freebsd11", digest)
+		_, err := ioutil.ReadAll(r)
+		s := status.Convert(err)
+		require.Equal(t, codes.Internal, s.Code())
+		require.Equal(t, errorMessage, s.Message())
+		require.NoError(t, r.Close())
+
+		// A Put() call for corrupt data should return an
+		// invalid argument error instead.
+		err = blobAccess.Put(
+			ctx, "fedora28", digest, digest.SizeBytes,
+			ioutil.NopCloser(bytes.NewBuffer(body)))
+		s = status.Convert(err)
+		require.Equal(t, codes.InvalidArgument, s.Code())
+		require.Equal(t, errorMessage, s.Message())
+		require.NoError(t, r.Close())
+	}
+	testBadData(
+		&remoteexecution.Digest{
+			Hash:      "3e25960a79dbc69b674cd4ec67a72c62",
+			SizeBytes: 11,
+		},
+		[]byte("Hello"),
+		"Blob is 6 bytes shorter than expected")
+	testBadData(
+		&remoteexecution.Digest{
+			Hash:      "8b1a9953c4611296a827abf8c47804d7",
+			SizeBytes: 5,
+		},
+		[]byte("Hello world"),
+		"Blob is longer than expected")
+	testBadData(
+		&remoteexecution.Digest{
+			Hash:      "8b1a9953c4611296a827abf8c47804d7",
+			SizeBytes: 11,
+		},
+		[]byte("Hello world"),
+		"Checksum of blob is 3e25960a79dbc69b674cd4ec67a72c62, while 8b1a9953c4611296a827abf8c47804d7 was expected")
+	testBadData(
+		&remoteexecution.Digest{
+			Hash:      "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0",
+			SizeBytes: 11,
+		},
+		[]byte("Hello world"),
+		"Checksum of blob is 7b502c3a1f48c8609ae212cdfb639dee39673f5e, while f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0 was expected")
+	testBadData(
+		&remoteexecution.Digest{
+			Hash:      "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969",
+			SizeBytes: 11,
+		},
+		[]byte("Hello world"),
+		"Checksum of blob is 64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c, while 185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969 was expected")
+}
