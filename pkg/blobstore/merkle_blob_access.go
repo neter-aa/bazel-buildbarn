@@ -15,31 +15,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// validateDigest validates the format of fields in a Digest object and
-// returns some of its properties.
-func validateDigest(digest *remoteexecution.Digest) (util.DigestFormat, error) {
-	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
-	if err != nil {
-		return nil, err
-	}
-
-	// hex.DecodeString() also permits uppercase characters, which
-	// would lead to duplicate representations. Reject those
-	// explicitly without calling hex.DecodeString().
-	for _, c := range digest.Hash {
-		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return nil, status.Errorf(codes.InvalidArgument, "Non-hexadecimal character in digest hash: %#U", c)
-		}
-	}
-
-	if digest.SizeBytes < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid digest size: %d bytes", digest.SizeBytes)
-	}
-	return digestFormat, nil
-}
-
 type merkleBlobAccess struct {
-	blobAccess BlobAccess
+	BlobAccess
 }
 
 // NewMerkleBlobAccess creates an adapter that validates that blobs read
@@ -49,21 +26,21 @@ type merkleBlobAccess struct {
 // and that if corruption were to occur, use of corrupted data is prevented.
 func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 	return &merkleBlobAccess{
-		blobAccess: blobAccess,
+		BlobAccess: blobAccess,
 	}
 }
 
 func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
-	digestFormat, err := validateDigest(digest)
+	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
 	if err != nil {
-		return util.NewErrorReader(err)
+		log.Fatal("Failed to obtain format of digest, even though its contents have already been validated")
 	}
 	checksum, _ := hex.DecodeString(digest.Hash)
 	if err != nil {
 		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
 	}
 	return &checksumValidatingReader{
-		ReadCloser:       ba.blobAccess.Get(ctx, instance, digest),
+		ReadCloser:       ba.BlobAccess.Get(ctx, instance, digest),
 		expectedChecksum: checksum,
 		partialChecksum:  digestFormat(),
 		sizeLeft:         digest.SizeBytes,
@@ -72,7 +49,7 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 			// corruption. This will cause future calls to
 			// FindMissing() to indicate absence, causing clients to
 			// re-upload them and/or build actions to be retried.
-			if err := ba.blobAccess.Delete(ctx, instance, digest); err == nil {
+			if err := ba.BlobAccess.Delete(ctx, instance, digest); err == nil {
 				log.Printf("Successfully deleted corrupted blob %s", digest)
 			} else {
 				log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
@@ -83,19 +60,18 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 }
 
 func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
-	digestFormat, err := validateDigest(digest)
-	if err != nil {
-		r.Close()
-		return err
-	}
 	if digest.SizeBytes != sizeBytes {
 		log.Fatal("Called into CAS to store non-CAS object")
+	}
+	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
+	if err != nil {
+		log.Fatal("Failed to obtain format of digest, even though its contents have already been validated")
 	}
 	checksum, _ := hex.DecodeString(digest.Hash)
 	if err != nil {
 		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
 	}
-	return ba.blobAccess.Put(ctx, instance, digest, digest.SizeBytes, &checksumValidatingReader{
+	return ba.BlobAccess.Put(ctx, instance, digest, digest.SizeBytes, &checksumValidatingReader{
 		ReadCloser:       r,
 		expectedChecksum: checksum,
 		partialChecksum:  digestFormat(),
@@ -103,24 +79,6 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *re
 		invalidator:      func() {},
 		errorCode:        codes.InvalidArgument,
 	})
-}
-
-func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
-	_, err := validateDigest(digest)
-	if err != nil {
-		return err
-	}
-	return ba.blobAccess.Delete(ctx, instance, digest)
-}
-
-func (ba *merkleBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
-	for _, digest := range digests {
-		_, err := validateDigest(digest)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ba.blobAccess.FindMissing(ctx, instance, digests)
 }
 
 type checksumValidatingReader struct {

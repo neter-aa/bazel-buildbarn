@@ -36,8 +36,14 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string) (BlobAccess, Bl
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO(edsch): Should the Action Cache also have some validating adapter?
-	return NewMetricsBlobAccess(NewMerkleBlobAccess(contentAddressableStorage), "cas_merkle"), actionCache, nil
+	contentAddressableStorage = NewMetricsBlobAccess(
+		NewValidDigestRequiringBlobAccess(
+			NewMerkleBlobAccess(contentAddressableStorage)),
+		"cas_valid_digest_requiring")
+	actionCache = NewMetricsBlobAccess(
+		NewValidDigestRequiringBlobAccess(actionCache),
+		"ac_valid_digest_requiring")
+	return contentAddressableStorage, actionCache, nil
 }
 
 func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, digestKeyer util.DigestKeyer) (BlobAccess, error) {
