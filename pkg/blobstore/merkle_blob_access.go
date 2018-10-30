@@ -15,30 +15,27 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// extractDigest validates the format of fields in a Digest object and returns them.
-func extractDigest(digest *remoteexecution.Digest) ([]byte, int64, util.DigestFormat, error) {
+// validateDigest validates the format of fields in a Digest object and
+// returns some of its properties.
+func validateDigest(digest *remoteexecution.Digest) (util.DigestFormat, error) {
 	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, err
 	}
 
 	// hex.DecodeString() also permits uppercase characters, which
 	// would lead to duplicate representations. Reject those
-	// explicitly prior to calling hex.DecodeString().
+	// explicitly without calling hex.DecodeString().
 	for _, c := range digest.Hash {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return nil, 0, nil, status.Errorf(codes.InvalidArgument, "Non-hexadecimal character in digest hash: %#U", c)
+			return nil, status.Errorf(codes.InvalidArgument, "Non-hexadecimal character in digest hash: %#U", c)
 		}
-	}
-	checksum, err := hex.DecodeString(digest.Hash)
-	if err != nil {
-		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
 	}
 
 	if digest.SizeBytes < 0 {
-		return nil, 0, nil, status.Errorf(codes.InvalidArgument, "Invalid digest size: %d bytes", digest.SizeBytes)
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid digest size: %d bytes", digest.SizeBytes)
 	}
-	return checksum, digest.SizeBytes, digestFormat, nil
+	return digestFormat, nil
 }
 
 type merkleBlobAccess struct {
@@ -57,15 +54,19 @@ func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 }
 
 func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
-	checksum, size, digestFormat, err := extractDigest(digest)
+	digestFormat, err := validateDigest(digest)
 	if err != nil {
 		return util.NewErrorReader(err)
+	}
+	checksum, _ := hex.DecodeString(digest.Hash)
+	if err != nil {
+		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
 	}
 	return &checksumValidatingReader{
 		ReadCloser:       ba.blobAccess.Get(ctx, instance, digest),
 		expectedChecksum: checksum,
 		partialChecksum:  digestFormat(),
-		sizeLeft:         size,
+		sizeLeft:         digest.SizeBytes,
 		invalidator: func() {
 			// Trigger blob deletion in case we detect data
 			// corruption. This will cause future calls to
@@ -82,26 +83,30 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 }
 
 func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
-	checksum, digestSizeBytes, digestFormat, err := extractDigest(digest)
+	digestFormat, err := validateDigest(digest)
 	if err != nil {
 		r.Close()
 		return err
 	}
-	if digestSizeBytes != sizeBytes {
+	if digest.SizeBytes != sizeBytes {
 		log.Fatal("Called into CAS to store non-CAS object")
 	}
-	return ba.blobAccess.Put(ctx, instance, digest, digestSizeBytes, &checksumValidatingReader{
+	checksum, _ := hex.DecodeString(digest.Hash)
+	if err != nil {
+		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
+	}
+	return ba.blobAccess.Put(ctx, instance, digest, digest.SizeBytes, &checksumValidatingReader{
 		ReadCloser:       r,
 		expectedChecksum: checksum,
 		partialChecksum:  digestFormat(),
-		sizeLeft:         digestSizeBytes,
+		sizeLeft:         digest.SizeBytes,
 		invalidator:      func() {},
 		errorCode:        codes.InvalidArgument,
 	})
 }
 
 func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest *remoteexecution.Digest) error {
-	_, _, _, err := extractDigest(digest)
+	_, err := validateDigest(digest)
 	if err != nil {
 		return err
 	}
@@ -110,7 +115,7 @@ func (ba *merkleBlobAccess) Delete(ctx context.Context, instance string, digest 
 
 func (ba *merkleBlobAccess) FindMissing(ctx context.Context, instance string, digests []*remoteexecution.Digest) ([]*remoteexecution.Digest, error) {
 	for _, digest := range digests {
-		_, _, _, err := extractDigest(digest)
+		_, err := validateDigest(digest)
 		if err != nil {
 			return nil, err
 		}
