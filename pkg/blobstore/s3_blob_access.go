@@ -31,12 +31,12 @@ type s3BlobAccess struct {
 	uploader            *s3manager.Uploader
 	bucketName          *string
 	underlyingBlobKeyer util.DigestKeyer
-	keyPrefix           *string
+	keyPrefix           string
 }
 
 // NewS3BlobAccess creates a BlobAccess that uses an S3 bucket as its backing
 // store.
-func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName, keyPrefix *string, blobKeyer util.DigestKeyer) BlobAccess {
+func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName *string, keyPrefix string, blobKeyer util.DigestKeyer) BlobAccess {
 	return &s3BlobAccess{
 		s3:                  s3,
 		uploader:            uploader,
