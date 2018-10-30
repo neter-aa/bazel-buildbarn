@@ -28,6 +28,8 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string) (BlobAccess, Bl
 	if err := proto.UnmarshalText(string(data), &config); err != nil {
 		return nil, nil, err
 	}
+
+	// Create two stores based on definitions in configuration.
 	contentAddressableStorage, err := createBlobAccess(config.ContentAddressableStorage, "cas", util.KeyDigestWithoutInstance)
 	if err != nil {
 		return nil, nil, err
@@ -36,6 +38,9 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string) (BlobAccess, Bl
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Stack some additional mandatory layers on top to protect
+	// against data corruption and misuse.
 	contentAddressableStorage = NewMetricsBlobAccess(
 		NewValidDigestRequiringBlobAccess(
 			NewMerkleBlobAccess(contentAddressableStorage)),
