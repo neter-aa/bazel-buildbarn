@@ -31,20 +31,10 @@ func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 }
 
 func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *remoteexecution.Digest) io.ReadCloser {
-	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
-	if err != nil {
-		log.Fatal("Failed to obtain format of digest, even though its contents have already been validated")
-	}
-	checksum, _ := hex.DecodeString(digest.Hash)
-	if err != nil {
-		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
-	}
-	return &checksumValidatingReader{
-		ReadCloser:       ba.BlobAccess.Get(ctx, instance, digest),
-		expectedChecksum: checksum,
-		partialChecksum:  digestFormat(),
-		sizeLeft:         digest.SizeBytes,
-		invalidator: func() {
+	return newChecksumValidatingReader(
+		digest,
+		ba.BlobAccess.Get(ctx, instance, digest),
+		func() {
 			// Trigger blob deletion in case we detect data
 			// corruption. This will cause future calls to
 			// FindMissing() to indicate absence, causing clients to
@@ -55,30 +45,16 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, instance string, digest *re
 				log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
 			}
 		},
-		errorCode: codes.Internal,
-	}
+		codes.Internal)
 }
 
 func (ba *merkleBlobAccess) Put(ctx context.Context, instance string, digest *remoteexecution.Digest, sizeBytes int64, r io.ReadCloser) error {
 	if digest.SizeBytes != sizeBytes {
 		log.Fatal("Called into CAS to store non-CAS object")
 	}
-	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
-	if err != nil {
-		log.Fatal("Failed to obtain format of digest, even though its contents have already been validated")
-	}
-	checksum, _ := hex.DecodeString(digest.Hash)
-	if err != nil {
-		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
-	}
-	return ba.BlobAccess.Put(ctx, instance, digest, digest.SizeBytes, &checksumValidatingReader{
-		ReadCloser:       r,
-		expectedChecksum: checksum,
-		partialChecksum:  digestFormat(),
-		sizeLeft:         digest.SizeBytes,
-		invalidator:      func() {},
-		errorCode:        codes.InvalidArgument,
-	})
+	return ba.BlobAccess.Put(
+		ctx, instance, digest, digest.SizeBytes,
+		newChecksumValidatingReader(digest, r, func() {}, codes.InvalidArgument))
 }
 
 type checksumValidatingReader struct {
@@ -91,6 +67,25 @@ type checksumValidatingReader struct {
 	// Called whenever size/checksum inconsistencies are detected.
 	invalidator func()
 	errorCode   codes.Code
+}
+
+func newChecksumValidatingReader(digest *remoteexecution.Digest, r io.ReadCloser, invalidator func(), errorCode codes.Code) io.ReadCloser {
+	digestFormat, err := util.DigestFormatFromLength(len(digest.Hash))
+	if err != nil {
+		log.Fatal("Failed to obtain format of digest, even though its contents have already been validated")
+	}
+	checksum, _ := hex.DecodeString(digest.Hash)
+	if err != nil {
+		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
+	}
+	return &checksumValidatingReader{
+		ReadCloser:       r,
+		expectedChecksum: checksum,
+		partialChecksum:  digestFormat(),
+		sizeLeft:         digest.SizeBytes,
+		invalidator:      invalidator,
+		errorCode:        errorCode,
+	}
 }
 
 func (r *checksumValidatingReader) Read(p []byte) (int, error) {
