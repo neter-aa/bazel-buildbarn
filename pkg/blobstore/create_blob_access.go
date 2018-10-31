@@ -69,13 +69,18 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		implementation = NewRemoteBlobAccess(backend.Remote.Address, storageType)
 	case *pb.BlobAccessConfiguration_S3:
 		backendType = "s3"
-		session := session.New(&aws.Config{
-			Credentials:      credentials.NewStaticCredentials(backend.S3.AccessKeyId, backend.S3.SecretAccessKey, ""),
+		cfg := aws.Config{
 			Endpoint:         &backend.S3.Endpoint,
 			Region:           &backend.S3.Region,
 			DisableSSL:       &backend.S3.DisableSsl,
 			S3ForcePathStyle: aws.Bool(true),
-		})
+		}
+		// If AccessKeyId isn't specified, allow AWS to search for credentials.
+		// In AWS EC2, this search will include the instance IAM Role.
+		if backend.S3.AccessKeyId != "" {
+			cfg.Credentials = credentials.NewStaticCredentials(backend.S3.AccessKeyId, backend.S3.SecretAccessKey, "")
+		}
+		session := session.New(&cfg)
 		s3 := s3.New(session)
 		// Set the uploader concurrency to 1 to drastically reduce memory usage.
 		// TODO(edsch): Maybe the concurrency can be left alone for this process?
@@ -85,6 +90,7 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			s3,
 			uploader,
 			&backend.S3.Bucket,
+			&backend.S3.KeyPrefix,
 			digestKeyer)
 	case *pb.BlobAccessConfiguration_SizeDistinguishing:
 		backendType = "size_distinguishing"

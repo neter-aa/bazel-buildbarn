@@ -46,7 +46,7 @@ message S3BlobAccessConfiguration {
     // URL of the S3 bucket (e.g., "http://localhost:9000" when using Minio).
     string endpoint = 1;
 
-    // AWS Access Key ID.
+    // AWS Access Key ID. If unspecified, AWS will search the default credential provider chain.
     string access_key_id = 2;
 
     // AWS Secret Access Key.
@@ -60,6 +60,9 @@ message S3BlobAccessConfiguration {
 
     // Name of the S3 bucket.
     string bucket = 6;
+
+    // Prefix for keys, e.g. 'bazel_cas/'.
+    string key_prefix = 7;
 }
 
 message SizeDistinguishingeBlobAccessConfiguration {
