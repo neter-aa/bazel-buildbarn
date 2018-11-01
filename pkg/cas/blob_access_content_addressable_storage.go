@@ -27,6 +27,7 @@ func NewBlobAccessContentAddressableStorage(blobAccess blobstore.BlobAccess) Con
 }
 
 func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, digest *util.Digest) (*remoteexecution.Action, error) {
+	// TODO(edsch): Reject fetching overly large blobs.
 	r := cas.blobAccess.Get(ctx, digest)
 	data, err := ioutil.ReadAll(r)
 	r.Close()
@@ -41,6 +42,7 @@ func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, d
 }
 
 func (cas *blobAccessContentAddressableStorage) GetCommand(ctx context.Context, digest *util.Digest) (*remoteexecution.Command, error) {
+	// TODO(edsch): Reject fetching overly large blobs.
 	r := cas.blobAccess.Get(ctx, digest)
 	data, err := ioutil.ReadAll(r)
 	r.Close()
@@ -55,6 +57,7 @@ func (cas *blobAccessContentAddressableStorage) GetCommand(ctx context.Context, 
 }
 
 func (cas *blobAccessContentAddressableStorage) GetDirectory(ctx context.Context, digest *util.Digest) (*remoteexecution.Directory, error) {
+	// TODO(edsch): Reject fetching overly large blobs.
 	r := cas.blobAccess.Get(ctx, digest)
 	data, err := ioutil.ReadAll(r)
 	r.Close()
