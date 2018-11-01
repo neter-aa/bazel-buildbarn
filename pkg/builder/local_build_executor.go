@@ -73,7 +73,7 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *
 	}
 
 	for _, file := range directory.Files {
-		childDigest, err := digest.GetDerivedDigest(file.Digest)
+		childDigest, err := digest.NewDerivedDigest(file.Digest)
 		if err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *
 		}
 	}
 	for _, directory := range directory.Directories {
-		childDigest, err := digest.GetDerivedDigest(directory.Digest)
+		childDigest, err := digest.NewDerivedDigest(directory.Digest)
 		if err != nil {
 			return err
 		}
@@ -257,7 +257,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
-	commandDigest, err := actionDigest.GetDerivedDigest(action.CommandDigest)
+	commandDigest, err := actionDigest.NewDerivedDigest(action.CommandDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
@@ -270,7 +270,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		timeAfterGetActionCommand.Sub(timeStart).Seconds())
 
 	// Set up inputs.
-	inputRootDigest, err := actionDigest.GetDerivedDigest(action.InputRootDigest)
+	inputRootDigest, err := actionDigest.NewDerivedDigest(action.InputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
