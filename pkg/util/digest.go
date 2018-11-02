@@ -101,6 +101,11 @@ func (d *Digest) GetRawDigest() *remoteexecution.Digest {
 	}
 }
 
+// GetInstance returns the instance name of the object.
+func (d *Digest) GetInstance() string {
+	return d.instance
+}
+
 // GetHash returns the hash of the object.
 func (d *Digest) GetHash() []byte {
 	return d.hash
