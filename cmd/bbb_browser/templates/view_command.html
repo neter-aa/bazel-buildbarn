@@ -1,8 +1,19 @@
 <table class="table">
 	<tr class="d-flex">
 		<th class="col-3">Arguments:</th>
-		<td class="col-9 text-monospace" style="white-space: pre-wrap">{{$firstArgument := true}}{{range .Arguments}}{{if $firstArgument}}<b>{{shellquote .}}</b>{{else}} \
-    {{shellquote .}}{{end}}{{$firstArgument = false}}{{end}}</td>
+		<td class="col-9 text-monospace">
+			<div style="padding-left: 2em; text-indent: -2em">
+				{{$firstArgument := true}}
+				{{range .Arguments}}
+					{{if $firstArgument}}
+						<b>{{shellquote .}}</b>
+					{{else}}
+						{{shellquote .}}
+					{{end}}
+					{{$firstArgument = false}}
+				{{end}}
+			</div>
+		</td>
 	</tr>
 	<tr class="d-flex">
 		<th class="col-3">Environment variables:</th>
