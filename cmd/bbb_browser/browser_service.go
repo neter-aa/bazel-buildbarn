@@ -14,6 +14,9 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/gorilla/mux"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func getDigestFromRequest(req *http.Request) (*util.Digest, error) {
@@ -87,7 +90,7 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) 
 		command, err := s.contentAddressableStorage.GetCommand(ctx, commandDigest)
 		if err == nil {
 			actionInfo.Command = command
-		} else {
+		} else if status.Code(err) != codes.NotFound {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -103,11 +106,11 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) 
 				Instance:  inputRootDigest.GetInstance(),
 				Directory: directory,
 			}
-		} else {
+		} else if status.Code(err) != codes.NotFound {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-	} else {
+	} else if status.Code(err) != codes.NotFound {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -115,8 +118,13 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) 
 	actionResult, err := s.actionCache.GetActionResult(ctx, digest)
 	if err == nil {
 		actionInfo.ActionResult = actionResult
-	} else {
+	} else if status.Code(err) != codes.NotFound {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if action == nil && actionResult == nil {
+		http.Error(w, "Could not find an action or action result", http.StatusNotFound)
 		return
 	}
 
