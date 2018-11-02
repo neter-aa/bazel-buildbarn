@@ -1,4 +1,12 @@
-{{template "header.html"}}
+{{if .ActionResult}}
+	{{if eq .ActionResult.ExitCode 0}}
+		{{template "header.html" "success"}}
+	{{else}}
+		{{template "header.html" "danger"}}
+	{{end}}
+{{else}}
+	{{template "header.html" "secondary"}}
+{{end}}
 
 <h1 class="my-4">Action</h1>
 
@@ -6,7 +14,7 @@
 <table class="table">
 	<tr class="d-flex">
 		<th class="col-3">Timeout:</th>
-		<td class="col-9">{{if .Action.Timeout}}{{.Action.Timeout.Seconds}} seconds{{else}}none{{end}}</td>
+		<td class="col-9">{{if .Action.Timeout}}{{.Action.Timeout.Seconds}} seconds{{else}}∞{{end}}</td>
 	</tr>
 	<tr class="d-flex">
 		<th class="col-3">Do not cache:</th>
