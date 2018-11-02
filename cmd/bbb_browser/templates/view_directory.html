@@ -1,0 +1,25 @@
+{{$instance := .Instance}}
+
+<table class="directory_listing">
+	{{range .Directory.Directories}}
+		<tr>
+			<td>drwxr-xr-x</td>
+			<td style="text-align: right">{{.Digest.SizeBytes}}</td>
+			<td><a href="/directory/{{$instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/">{{.Name}}</a>/</td>
+		</tr>
+	{{end}}
+	{{range .Directory.Symlinks}}
+		<tr>
+			<td>lrwxrwxrwx</td>
+			<td style="text-align: right">...</td>
+			<td>{{.Name}} -&gt; {{.Target}}</td>
+		</tr>
+	{{end}}
+	{{range .Directory.Files}}
+		<tr>
+			<td>-r-{{if .IsExecutable}}x{{else}}-{{end}}r-{{if .IsExecutable}}x{{else}}-{{end}}r-{{if .IsExecutable}}x{{else}}-{{end}}</td>
+			<td style="text-align: right">{{.Digest.SizeBytes}}</td>
+			<td><a href="/file/{{$instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/{{.Name}}">{{.Name}}</a></td>
+		</tr>
+	{{end}}
+</table>

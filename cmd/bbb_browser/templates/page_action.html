@@ -1,0 +1,44 @@
+{{template "header.html"}}
+
+<h1 class="my-4">Action</h1>
+
+{{if .Action}}
+<table class="table">
+	<tr class="d-flex">
+		<th class="col-3">Timeout:</th>
+		<td class="col-9">{{if .Action.Timeout}}{{.Action.Timeout.Seconds}} seconds{{else}}none{{end}}</td>
+	</tr>
+	<tr class="d-flex">
+		<th class="col-3">Do not cache:</th>
+		<td class="col-9">{{if .Action.DoNotCache}}yes{{else}}no{{end}}</td>
+	</tr>
+</table>
+{{else}}
+This action could not be found.
+{{end}}
+
+<h2 class="my-4">Command {{if .Action}}(<a href="/command/{{.Instance}}/{{.Action.CommandDigest.Hash}}/{{.Action.CommandDigest.SizeBytes}}/">link</a>){{end}}</h2>
+
+{{if .Command}}
+{{template "view_command.html" .Command}}
+{{else}}
+The command of this action could not be found.
+{{end}}
+
+<h2 class="my-4">Result</h2>
+
+Qux
+
+<h2 class="my-4">Input files {{if .Action}}(<a href="/directory/{{.Instance}}/{{.Action.InputRootDigest.Hash}}/{{.Action.InputRootDigest.SizeBytes}}/">link</a>){{end}}</h2>
+
+{{if .InputRoot}}
+{{template "view_directory.html" .InputRoot}}
+{{else}}
+The input root of this action could not be found.
+{{end}}
+
+<h2 class="my-4">Output files</h2>
+
+Foo
+
+{{template "footer.html"}}

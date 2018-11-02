@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "6dede2c65ce86289969b907f343a1382d33c14fbce5e30dd17bb59bb55bb6593",
-    strip_prefix = "rules_docker-0.4.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/archive/v0.4.0.tar.gz"],
+    sha256 = "29d109605e0d6f9c892584f07275b8c9260803bf0c6fcb7de2623b2bedc910bd",
+    strip_prefix = "rules_docker-0.5.1",
+    urls = ["https://github.com/bazelbuild/rules_docker/archive/v0.5.1.tar.gz"],
 )
 
 http_archive(
@@ -184,4 +184,22 @@ go_repository(
     name = "com_github_stretchr_testify",
     commit = "04af85275a5c7ac09d16bb3b9b2e751ed45154e5",
     importpath = "github.com/stretchr/testify",
+)
+
+go_repository(
+    name = "com_github_gorilla_context",
+    commit = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+    importpath = "github.com/gorilla/context",
+)
+
+go_repository(
+    name = "com_github_gorilla_mux",
+    commit = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf",
+    importpath = "github.com/gorilla/mux",
+)
+
+go_repository(
+    name = "com_github_kballard_go_shellquote",
+    commit = "95032a82bc518f77982ea72343cc1ade730072f0",
+    importpath = "github.com/kballard/go-shellquote",
 )

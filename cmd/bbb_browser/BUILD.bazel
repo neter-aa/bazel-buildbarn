@@ -1,0 +1,53 @@
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_layer")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "browser_service.go",
+        "main.go",
+    ],
+    importpath = "github.com/EdSchouten/bazel-buildbarn/cmd/bbb_browser",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/ac:go_default_library",
+        "//pkg/blobstore:go_default_library",
+        "//pkg/cas:go_default_library",
+        "//pkg/util:go_default_library",
+        "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
+        "@com_github_gorilla_mux//:go_default_library",
+        "@com_github_kballard_go_shellquote//:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promhttp:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "bbb_browser",
+    embed = [":go_default_library"],
+    pure = "on",
+    visibility = ["//visibility:private"],
+)
+
+container_layer(
+    name = "bbb_browser_layer_executable",
+    files = [":bbb_browser"],
+)
+
+container_layer(
+    name = "bbb_browser_layer_resources",
+    data_path = ".",
+    files = glob([
+        "static/**",
+        "templates/**",
+    ]),
+)
+
+container_image(
+    name = "bbb_browser_container",
+    entrypoint = ["/bbb_browser"],
+    layers = [
+        ":bbb_browser_layer_executable",
+        ":bbb_browser_layer_resources",
+    ],
+    visibility = ["//visibility:public"],
+)

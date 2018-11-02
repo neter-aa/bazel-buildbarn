@@ -1,0 +1,27 @@
+<table class="table">
+	<tr class="d-flex">
+		<th class="col-3">Arguments:</th>
+		<td class="col-9 text-monospace" style="white-space: pre-wrap">{{$firstArgument := true}}{{range .Arguments}}{{if $firstArgument}}<b>{{shellquote .}}</b>{{else}} \
+    {{shellquote .}}{{end}}{{$firstArgument = false}}{{end}}</td>
+	</tr>
+	<tr class="d-flex">
+		<th class="col-3">Environment variables:</th>
+		<td class="col-9 text-monospace">
+			{{range .EnvironmentVariables}}
+				<b>{{.Name}}</b>={{shellquote .Value}}<br/>
+			{{end}}
+		</td>
+	</tr>
+	<tr class="d-flex">
+		<th class="col-3">Working directory:</th>
+		<td class="col-9 text-monospace">{{if .WorkingDirectory}}{{.WorkingDirectory}}{{else}}.{{end}}</td>
+	</tr>
+	<tr class="d-flex">
+		<th class="col-3">Platform properties:</th>
+		<td class="col-9">
+			{{range .Platform.Properties}}
+				<b>{{.Name}}</b> = {{.Value}}<br/>
+			{{end}}
+		</td>
+	</tr>
+</table>
