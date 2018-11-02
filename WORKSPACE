@@ -170,7 +170,7 @@ go_repository(
 
 go_repository(
     name = "com_github_bazelbuild_remote_apis",
-    commit = "6130f7e23ae157d5cf12c5d6af325a1dae57e235",
+    commit = "4cc20a3a58263567d4c51778e836b7a61ceb4052",
     importpath = "github.com/bazelbuild/remote-apis",
 )
 
