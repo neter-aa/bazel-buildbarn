@@ -27,7 +27,16 @@ The command of this action could not be found.
 
 <h2 class="my-4">Result</h2>
 
-Qux
+{{if .ActionResult}}
+<table class="table">
+	<tr class="d-flex">
+		<th class="col-3">Exit code:</th>
+		<td class="col-9">{{.ActionResult.ExitCode}}</td>
+	</tr>
+</table>
+{{else}}
+The action result of this action could not be found.
+{{end}}
 
 <h2 class="my-4">Input files {{if .Action}}(<a href="/directory/{{.Instance}}/{{.Action.InputRootDigest.Hash}}/{{.Action.InputRootDigest.SizeBytes}}/">link</a>){{end}}</h2>
 

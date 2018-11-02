@@ -65,10 +65,11 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) 
 	}
 
 	actionInfo := struct {
-		Instance  string
-		Action    *remoteexecution.Action
-		Command   *remoteexecution.Command
-		InputRoot *directoryInfo
+		Instance     string
+		Action       *remoteexecution.Action
+		Command      *remoteexecution.Command
+		InputRoot    *directoryInfo
+		ActionResult *remoteexecution.ActionResult
 	}{
 		Instance: digest.GetInstance(),
 	}
@@ -106,6 +107,14 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+	} else {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	actionResult, err := s.actionCache.GetActionResult(ctx, digest)
+	if err == nil {
+		actionInfo.ActionResult = actionResult
 	} else {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
