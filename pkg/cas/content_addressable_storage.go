@@ -14,6 +14,8 @@ type ContentAddressableStorage interface {
 	GetCommand(ctx context.Context, digest *util.Digest) (*remoteexecution.Command, error)
 	GetDirectory(ctx context.Context, digest *util.Digest) (*remoteexecution.Directory, error)
 	GetFile(ctx context.Context, digest *util.Digest, outputPath string, isExecutable bool) error
+	GetTree(ctx context.Context, digest *util.Digest) (*remoteexecution.Tree, error)
+
 	PutFile(ctx context.Context, path string, parentDigest *util.Digest) (*util.Digest, bool, error)
 	PutTree(ctx context.Context, tree *remoteexecution.Tree, parentDigest *util.Digest) (*util.Digest, error)
 }

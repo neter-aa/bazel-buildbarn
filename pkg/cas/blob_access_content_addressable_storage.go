@@ -26,46 +26,36 @@ func NewBlobAccessContentAddressableStorage(blobAccess blobstore.BlobAccess) Con
 	}
 }
 
-func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, digest *util.Digest) (*remoteexecution.Action, error) {
+func (cas *blobAccessContentAddressableStorage) getMessage(ctx context.Context, digest *util.Digest, message proto.Message) error {
 	// TODO(edsch): Reject fetching overly large blobs.
 	r := cas.blobAccess.Get(ctx, digest)
 	data, err := ioutil.ReadAll(r)
 	r.Close()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	return proto.Unmarshal(data, message)
+}
+
+func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, digest *util.Digest) (*remoteexecution.Action, error) {
 	var action remoteexecution.Action
-	if err := proto.Unmarshal(data, &action); err != nil {
+	if err := cas.getMessage(ctx, digest, &action); err != nil {
 		return nil, err
 	}
 	return &action, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) GetCommand(ctx context.Context, digest *util.Digest) (*remoteexecution.Command, error) {
-	// TODO(edsch): Reject fetching overly large blobs.
-	r := cas.blobAccess.Get(ctx, digest)
-	data, err := ioutil.ReadAll(r)
-	r.Close()
-	if err != nil {
-		return nil, err
-	}
 	var command remoteexecution.Command
-	if err := proto.Unmarshal(data, &command); err != nil {
+	if err := cas.getMessage(ctx, digest, &command); err != nil {
 		return nil, err
 	}
 	return &command, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) GetDirectory(ctx context.Context, digest *util.Digest) (*remoteexecution.Directory, error) {
-	// TODO(edsch): Reject fetching overly large blobs.
-	r := cas.blobAccess.Get(ctx, digest)
-	data, err := ioutil.ReadAll(r)
-	r.Close()
-	if err != nil {
-		return nil, err
-	}
 	var directory remoteexecution.Directory
-	if err := proto.Unmarshal(data, &directory); err != nil {
+	if err := cas.getMessage(ctx, digest, &directory); err != nil {
 		return nil, err
 	}
 	return &directory, nil
@@ -91,6 +81,14 @@ func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, dig
 		os.Remove(outputPath)
 	}
 	return err
+}
+
+func (cas *blobAccessContentAddressableStorage) GetTree(ctx context.Context, digest *util.Digest) (*remoteexecution.Tree, error) {
+	var tree remoteexecution.Tree
+	if err := cas.getMessage(ctx, digest, &tree); err != nil {
+		return nil, err
+	}
+	return &tree, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, path string, parentDigest *util.Digest) (*util.Digest, bool, error) {
