@@ -19,6 +19,7 @@ spec:
     spec:
       containers:
       - args:
+        - -browser-url=http://bbb-browser/
         - -scheduler=bbb-scheduler-debian8:8981
         image: ...
         name: bbb-worker
