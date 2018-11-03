@@ -203,3 +203,11 @@ go_repository(
     commit = "95032a82bc518f77982ea72343cc1ade730072f0",
     importpath = "github.com/kballard/go-shellquote",
 )
+
+go_repository(
+    name = "com_github_buildkite_terminal",
+    importpath = "github.com/buildkite/terminal",
+    sha256 = "ba8e7566a7fe5c62089fa56191c80bf15b121ae369d0c17f6f80669d3bbbb23f",
+    strip_prefix = "terminal-3.1.0",
+    urls = ["https://github.com/buildkite/terminal/archive/v3.1.0.tar.gz"],
+)

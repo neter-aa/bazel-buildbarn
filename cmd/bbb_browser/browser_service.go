@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,6 +16,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/buildkite/terminal"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 
@@ -63,6 +66,15 @@ type directoryInfo struct {
 	Directory *remoteexecution.Directory
 }
 
+type logInfo struct {
+	Name     string
+	Instance string
+	Digest   *remoteexecution.Digest
+	TooLarge bool
+	NotFound bool
+	HTML     template.HTML
+}
+
 func (s *BrowserService) handleActionFromActionCache(w http.ResponseWriter, req *http.Request) {
 	digest, err := getDigestFromRequest(req)
 	if err != nil {
@@ -101,15 +113,60 @@ func (s *BrowserService) handleActionFromURL(w http.ResponseWriter, req *http.Re
 	s.handleAction(w, req, digest, &actionResult)
 }
 
+func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance string, logDigest *remoteexecution.Digest) (*logInfo, error) {
+	digest, err := util.NewDigest(instance, logDigest)
+	if err != nil {
+		return nil, err
+	}
+	if size := digest.GetSizeBytes(); size == 0 {
+		// No log file present.
+		return nil, nil
+	} else if size > 100000 {
+		// Log file too large to show inline.
+		return &logInfo{
+			Name:     name,
+			Instance: instance,
+			Digest:   logDigest,
+			TooLarge: true,
+		}, nil
+	}
+
+	r := s.contentAddressableStorageBlobAccess.Get(ctx, digest)
+	data, err := ioutil.ReadAll(r)
+	r.Close()
+	if err == nil {
+		// Log found. Convert ANSI escape sequences to HTML.
+		return &logInfo{
+			Name:     name,
+			Instance: instance,
+			Digest:   logDigest,
+			HTML:     template.HTML(terminal.Render(data)),
+		}, nil
+	} else if status.Code(err) == codes.NotFound {
+		// Not found.
+		return &logInfo{
+			Name:     name,
+			Instance: instance,
+			Digest:   logDigest,
+			NotFound: true,
+		}, nil
+	} else {
+		return nil, err
+	}
+}
+
 func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, digest *util.Digest, actionResult *remoteexecution.ActionResult) {
+	instance := digest.GetInstance()
 	actionInfo := struct {
 		Instance     string
 		Action       *remoteexecution.Action
 		Command      *remoteexecution.Command
 		InputRoot    *directoryInfo
 		ActionResult *remoteexecution.ActionResult
+		StdoutInfo   *logInfo
+		StderrInfo   *logInfo
 	}{
-		Instance:     digest.GetInstance(),
+		Instance:     instance,
 		ActionResult: actionResult,
 	}
 
@@ -149,6 +206,20 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, 
 	} else if status.Code(err) != codes.NotFound {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if actionResult != nil {
+		// TODO(edsch): Should we support Std{out,err}Raw as well? Buildbarn doesn't generate them.
+		actionInfo.StdoutInfo, err = s.getLogInfo(ctx, "Stdout", instance, actionResult.StdoutDigest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		actionInfo.StderrInfo, err = s.getLogInfo(ctx, "Stderr", instance, actionResult.StderrDigest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	if action == nil && actionResult == nil {

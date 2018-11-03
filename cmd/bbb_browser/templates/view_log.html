@@ -1,0 +1,14 @@
+{{if .}}
+	<tr class="d-flex">
+		<th class="col-3">{{.Name}}<sup><a href="/file/{{.Instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/log.txt">*</a></sup>:</th>
+		<td class="col-9">
+			{{if .NotFound}}
+				The log file for this action could not be found.
+			{{else if .TooLarge}}
+				The log file for this action is too large to display ({{.Digest.SizeBytes}} bytes).
+			{{else}}
+				<div class="term-container">{{.HTML}}</div>
+			{{end}}
+		</td>
+	</tr>
+{{end}}
