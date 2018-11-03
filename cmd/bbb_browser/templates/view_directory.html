@@ -1,22 +1,29 @@
 {{$instance := .Instance}}
 
-<table class="table text-monospace">
-	{{range .Directory.Directories}}
+<table class="table">
+	<thead>
 		<tr>
+			<th scope="col" style="white-space: nowrap">Mode</th>
+			<th scope="col">Size</th>
+			<th scope="col" style="width: 100%">Filename</th>
+		</tr>
+	</thead>
+	{{range .Directory.Directories}}
+		<tr class="text-monospace">
 			<td style="white-space: nowrap">drwxr-xr-x</td>
 			<td style="text-align: right">{{.Digest.SizeBytes}}</td>
 			<td style="width: 100%"><a href="/directory/{{$instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/">{{.Name}}</a>/</td>
 		</tr>
 	{{end}}
 	{{range .Directory.Symlinks}}
-		<tr>
+		<tr class="text-monospace">
 			<td style="white-space: nowrap">lrwxrwxrwx</td>
 			<td style="text-align: right">...</td>
 			<td style="width: 100%">{{.Name}} -&gt; {{.Target}}</td>
 		</tr>
 	{{end}}
 	{{range .Directory.Files}}
-		<tr>
+		<tr class="text-monospace">
 			<td style="white-space: nowrap">-r-{{if .IsExecutable}}x{{else}}-{{end}}r-{{if .IsExecutable}}x{{else}}-{{end}}r-{{if .IsExecutable}}x{{else}}-{{end}}</td>
 			<td style="text-align: right">{{.Digest.SizeBytes}}</td>
 			<td style="width: 100%"><a href="/file/{{$instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/{{.Name}}">{{.Name}}</a></td>
