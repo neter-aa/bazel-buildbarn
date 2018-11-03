@@ -114,6 +114,9 @@ func (s *BrowserService) handleActionFromURL(w http.ResponseWriter, req *http.Re
 }
 
 func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance string, logDigest *remoteexecution.Digest) (*logInfo, error) {
+	if logDigest == nil {
+		return nil, nil
+	}
 	digest, err := util.NewDigest(instance, logDigest)
 	if err != nil {
 		return nil, err

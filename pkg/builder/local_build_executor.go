@@ -295,22 +295,28 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	localBuildExecutorDurationSeconds.WithLabelValues("run_command").Observe(
 		timeAfterRunCommand.Sub(timeAfterPrepareFilesytem).Seconds())
 
-	// Upload command output.
+	response := &remoteexecution.ExecuteResponse{
+		Result: &remoteexecution.ActionResult{
+			ExitCode: int32(exitCode),
+		},
+	}
+
+	// Upload command output. In the common case, the files are
+	// empty. If that's the case, don't bother setting the digest to
+	// keep the ActionResult small.
 	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, pathStdout, inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
+	}
+	if stdoutDigest.GetSizeBytes() > 0 {
+		response.Result.StdoutDigest = stdoutDigest.GetRawDigest()
 	}
 	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, pathStderr, inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
-
-	response := &remoteexecution.ExecuteResponse{
-		Result: &remoteexecution.ActionResult{
-			ExitCode:     int32(exitCode),
-			StdoutDigest: stdoutDigest.GetRawDigest(),
-			StderrDigest: stderrDigest.GetRawDigest(),
-		},
+	if stderrDigest.GetSizeBytes() > 0 {
+		response.Result.StderrDigest = stderrDigest.GetRawDigest()
 	}
 
 	// Upload output files.
