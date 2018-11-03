@@ -25,7 +25,7 @@
 This action could not be found.
 {{end}}
 
-<h2 class="my-4">Command {{if .Action}}(<a href="/command/{{.Instance}}/{{.Action.CommandDigest.Hash}}/{{.Action.CommandDigest.SizeBytes}}/">link</a>){{end}}</h2>
+<h2 class="my-4">Command{{if .Action}}<sup><a href="/command/{{.Instance}}/{{.Action.CommandDigest.Hash}}/{{.Action.CommandDigest.SizeBytes}}/">*</a></sup>{{end}}</h2>
 
 {{if .Command}}
 {{template "view_command.html" .Command}}
@@ -46,7 +46,7 @@ The command of this action could not be found.
 The action result of this action could not be found.
 {{end}}
 
-<h2 class="my-4">Input files {{if .Action}}(<a href="/directory/{{.Instance}}/{{.Action.InputRootDigest.Hash}}/{{.Action.InputRootDigest.SizeBytes}}/">link</a>){{end}}</h2>
+<h2 class="my-4">Input files{{if .Action}}<sup><a href="/directory/{{.Instance}}/{{.Action.InputRootDigest.Hash}}/{{.Action.InputRootDigest.SizeBytes}}/">*</a></sup>{{end}}</h2>
 
 {{if .InputRoot}}
 {{template "view_directory.html" .InputRoot}}
