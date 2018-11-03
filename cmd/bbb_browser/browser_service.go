@@ -161,19 +161,47 @@ func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance s
 func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, digest *util.Digest, actionResult *remoteexecution.ActionResult) {
 	instance := digest.GetInstance()
 	actionInfo := struct {
-		Instance     string
-		Action       *remoteexecution.Action
-		Command      *remoteexecution.Command
-		InputRoot    *directoryInfo
+		Instance string
+		Action   *remoteexecution.Action
+
+		Command *remoteexecution.Command
+
 		ActionResult *remoteexecution.ActionResult
 		StdoutInfo   *logInfo
 		StderrInfo   *logInfo
+
+		InputRoot *directoryInfo
+
+		OutputDirectories  []*remoteexecution.OutputDirectory
+		OutputSymlinks     []*remoteexecution.OutputSymlink
+		OutputFiles        []*remoteexecution.OutputFile
+		MissingDirectories []string
+		MissingFiles       []string
 	}{
 		Instance:     instance,
 		ActionResult: actionResult,
 	}
 
 	ctx := req.Context()
+	if actionResult != nil {
+		actionInfo.OutputDirectories = actionResult.OutputDirectories
+		actionInfo.OutputSymlinks = actionResult.OutputFileSymlinks
+		actionInfo.OutputFiles = actionResult.OutputFiles
+
+		// TODO(edsch): Should we support Std{out,err}Raw as well? Buildbarn doesn't generate them.
+		var err error
+		actionInfo.StdoutInfo, err = s.getLogInfo(ctx, "Stdout", instance, actionResult.StdoutDigest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		actionInfo.StderrInfo, err = s.getLogInfo(ctx, "Stderr", instance, actionResult.StderrDigest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
 	action, err := s.contentAddressableStorage.GetAction(ctx, digest)
 	if err == nil {
 		actionInfo.Action = action
@@ -186,6 +214,28 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, 
 		command, err := s.contentAddressableStorage.GetCommand(ctx, commandDigest)
 		if err == nil {
 			actionInfo.Command = command
+
+			foundDirectories := map[string]bool{}
+			for _, outputDirectory := range actionInfo.OutputDirectories {
+				foundDirectories[outputDirectory.Path] = true
+			}
+			for _, outputDirectory := range command.OutputDirectories {
+				if _, ok := foundDirectories[outputDirectory]; !ok {
+					actionInfo.MissingDirectories = append(actionInfo.MissingDirectories, outputDirectory)
+				}
+			}
+			foundFiles := map[string]bool{}
+			for _, outputSymlinks := range actionInfo.OutputSymlinks {
+				foundFiles[outputSymlinks.Path] = true
+			}
+			for _, outputFiles := range actionInfo.OutputFiles {
+				foundFiles[outputFiles.Path] = true
+			}
+			for _, outputFile := range command.OutputFiles {
+				if _, ok := foundFiles[outputFile]; !ok {
+					actionInfo.MissingFiles = append(actionInfo.MissingFiles, outputFile)
+				}
+			}
 		} else if status.Code(err) != codes.NotFound {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -209,20 +259,6 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, 
 	} else if status.Code(err) != codes.NotFound {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	if actionResult != nil {
-		// TODO(edsch): Should we support Std{out,err}Raw as well? Buildbarn doesn't generate them.
-		actionInfo.StdoutInfo, err = s.getLogInfo(ctx, "Stdout", instance, actionResult.StdoutDigest)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		actionInfo.StderrInfo, err = s.getLogInfo(ctx, "Stderr", instance, actionResult.StderrDigest)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 	}
 
 	if action == nil && actionResult == nil {

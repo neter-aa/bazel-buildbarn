@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"path"
 	"strings"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
@@ -29,6 +30,7 @@ func main() {
 	}
 
 	templates, err := template.New("templates").Funcs(template.FuncMap{
+		"basename": path.Base,
 		"shellquote": func(in string) string {
 			// Use non-breaking hyphens to improve readability of output.
 			return strings.Replace(shellquote.Join(in), "-", "‑", -1)
