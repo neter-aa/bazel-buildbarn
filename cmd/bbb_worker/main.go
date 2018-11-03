@@ -30,7 +30,7 @@ import (
 
 func main() {
 	var (
-		browserURLString = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, used for making log entries clickable")
+		browserURLString = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, accessible by the user through 'bazel build --verbose_failures'")
 		blobstoreConfig  = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
 		schedulerAddress = flag.String("scheduler", "", "Address of the scheduler to which to connect")
 	)
@@ -61,17 +61,20 @@ func main() {
 		log.Fatal("Failed to create cache directory: ", err)
 	}
 
-	buildExecutor := builder.NewCachingBuildExecutor(
-		builder.NewLocalBuildExecutor(
-			cas.NewDirectoryCachingContentAddressableStorage(
-				cas.NewHardlinkingContentAddressableStorage(
-					cas.NewBlobAccessContentAddressableStorage(
-						blobstore.NewExistencePreconditionBlobAccess(
-							contentAddressableStorageBlobAccess)),
-					util.DigestKeyWithoutInstance, "/cache", 10000, 1<<30),
-				util.DigestKeyWithoutInstance, 1000)),
-		ac.NewBlobAccessActionCache(
-			blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor")))
+	buildExecutor := builder.NewServerLogInjectingBuildExecutor(
+		builder.NewCachingBuildExecutor(
+			builder.NewLocalBuildExecutor(
+				cas.NewDirectoryCachingContentAddressableStorage(
+					cas.NewHardlinkingContentAddressableStorage(
+						cas.NewBlobAccessContentAddressableStorage(
+							blobstore.NewExistencePreconditionBlobAccess(
+								contentAddressableStorageBlobAccess)),
+						util.DigestKeyWithoutInstance, "/cache", 10000, 1<<30),
+					util.DigestKeyWithoutInstance, 1000)),
+			ac.NewBlobAccessActionCache(
+				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
+		contentAddressableStorageBlobAccess,
+		browserURL)
 
 	// Create connection with scheduler.
 	schedulerConnection, err := grpc.Dial(
@@ -119,6 +122,8 @@ func subscribeAndExecute(schedulerClient scheduler.SchedulerClient, buildExecuto
 			// Print the same URL, but with the ActionResult in
 			// Base64 appended to it. This link works, even if the
 			// ActionResult doesn't end up getting cached.
+			// TODO(edsch): Remove duplication with
+			// ServerLogInjectingBuildExecutor.
 			data, err := proto.Marshal(response.Result)
 			if err != nil {
 				return err
