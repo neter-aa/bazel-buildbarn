@@ -190,12 +190,12 @@ func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, 
 
 		// TODO(edsch): Should we support Std{out,err}Raw as well? Buildbarn doesn't generate them.
 		var err error
-		actionInfo.StdoutInfo, err = s.getLogInfo(ctx, "Stdout", instance, actionResult.StdoutDigest)
+		actionInfo.StdoutInfo, err = s.getLogInfo(ctx, "Standard output", instance, actionResult.StdoutDigest)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		actionInfo.StderrInfo, err = s.getLogInfo(ctx, "Stderr", instance, actionResult.StderrDigest)
+		actionInfo.StderrInfo, err = s.getLogInfo(ctx, "Standard error", instance, actionResult.StderrDigest)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
