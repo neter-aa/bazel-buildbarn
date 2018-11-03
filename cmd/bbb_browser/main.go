@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"strings"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
@@ -28,7 +29,10 @@ func main() {
 	}
 
 	templates, err := template.New("templates").Funcs(template.FuncMap{
-		"shellquote": shellquote.Join,
+		"shellquote": func(in string) string {
+			// Use non-breaking hyphens to improve readability of output.
+			return strings.Replace(shellquote.Join(in), "-", "‑", -1)
+		},
 	}).ParseGlob("templates/*")
 	if err != nil {
 		panic(err)
