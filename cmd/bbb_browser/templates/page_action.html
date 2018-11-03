@@ -39,7 +39,14 @@ The command of this action could not be found.
 <table class="table">
 	<tr class="d-flex">
 		<th class="col-3">Exit code:</th>
-		<td class="col-9">{{.ActionResult.ExitCode}}</td>
+		<td class="col-9">
+			{{.ActionResult.ExitCode}}
+			{{if eq .ActionResult.ExitCode 0}}
+				<span class="text-success">(Success)</span>
+			{{else}}
+				<span class="text-danger">(Failure)</span>
+			{{end}}
+		</td>
 	</tr>
 	{{template "view_log.html" .StdoutInfo}}
 	{{template "view_log.html" .StderrInfo}}
