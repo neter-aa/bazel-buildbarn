@@ -350,6 +350,9 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 			})
 		}
 	}
+
+	// TODO(edsch): Output symlinks.
+
 	timeAfterUpload := time.Now()
 	localBuildExecutorDurationSeconds.WithLabelValues("upload_output").Observe(
 		timeAfterUpload.Sub(timeAfterRunCommand).Seconds())
