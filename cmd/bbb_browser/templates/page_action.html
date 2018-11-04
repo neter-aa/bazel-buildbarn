@@ -78,8 +78,8 @@ The input root of this action could not be found.
 	{{range .OutputDirectories}}
 		<tr class="text-monospace">
 			<td>drwxr‑xr‑x</td>
-			<td style="text-align: right">{{.Digest.SizeBytes}}</td>
-			<td style="width: 100%"><a class="text-success" href="/tree/{{$instance}}/{{.Digest.Hash}}/{{.Digest.SizeBytes}}/">{{.Path}}</a>/</td>
+			<td style="text-align: right">{{.TreeDigest.SizeBytes}}</td>
+			<td style="width: 100%"><a class="text-success" href="/tree/{{$instance}}/{{.TreeDigest.Hash}}/{{.TreeDigest.SizeBytes}}/">{{.Path}}</a>/</td>
 		</tr>
 	{{end}}
 	{{range .OutputSymlinks}}
