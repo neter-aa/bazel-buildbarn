@@ -56,7 +56,7 @@ func main() {
 	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
 
 	// Backends capable of compiling.
-	schedulers := map[string]remoteexecution.ExecutionServer{}
+	schedulers := map[string]builder.BuildQueue{}
 	for _, schedulerEntry := range schedulersList {
 		components := strings.SplitN(schedulerEntry, "|", 2)
 		if len(components) != 2 {
@@ -72,7 +72,7 @@ func main() {
 		}
 		schedulers[components[0]] = builder.NewForwardingBuildQueue(scheduler)
 	}
-	buildQueue := builder.NewDemultiplexingBuildQueue(func(instance string) (remoteexecution.ExecutionServer, error) {
+	buildQueue := builder.NewDemultiplexingBuildQueue(func(instance string) (builder.BuildQueue, error) {
 		scheduler, ok := schedulers[instance]
 		if !ok {
 			return nil, status.Errorf(codes.InvalidArgument, "Unknown instance name")
@@ -88,6 +88,7 @@ func main() {
 	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache, *actionCacheAllowUpdates))
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
 	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess, 1<<16))
+	remoteexecution.RegisterCapabilitiesServer(s, buildQueue)
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(s)

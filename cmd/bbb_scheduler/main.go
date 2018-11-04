@@ -36,6 +36,7 @@ func main() {
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
+	remoteexecution.RegisterCapabilitiesServer(s, executionServer)
 	remoteexecution.RegisterExecutionServer(s, executionServer)
 	scheduler.RegisterSchedulerServer(s, schedulerServer)
 	grpc_prometheus.EnableHandlingTimeHistogram()

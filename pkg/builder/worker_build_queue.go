@@ -1,12 +1,14 @@
 package builder
 
 import (
+	"context"
 	"log"
 	"sync"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/satori/go.uuid"
 
@@ -76,7 +78,7 @@ type workerBuildQueue struct {
 // NewWorkerBuildQueue creates an execution server that places execution
 // requests in a queue. These execution requests may be extracted by
 // workers.
-func NewWorkerBuildQueue(deduplicationKeyFormat util.DigestKeyFormat, jobsPendingMax uint) (remoteexecution.ExecutionServer, scheduler.SchedulerServer) {
+func NewWorkerBuildQueue(deduplicationKeyFormat util.DigestKeyFormat, jobsPendingMax uint) (BuildQueue, scheduler.SchedulerServer) {
 	bq := &workerBuildQueue{
 		deduplicationKeyFormat: deduplicationKeyFormat,
 		jobsPendingMax:         jobsPendingMax,
@@ -86,6 +88,34 @@ func NewWorkerBuildQueue(deduplicationKeyFormat util.DigestKeyFormat, jobsPendin
 	}
 	bq.jobsPendingInsertionWakeup = sync.NewCond(&bq.jobsLock)
 	return bq, bq
+}
+
+func (bq *workerBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecution.GetCapabilitiesRequest) (*remoteexecution.ServerCapabilities, error) {
+	return &remoteexecution.ServerCapabilities{
+		CacheCapabilities: &remoteexecution.CacheCapabilities{
+			DigestFunction: []remoteexecution.DigestFunction{
+				remoteexecution.DigestFunction_MD5,
+				remoteexecution.DigestFunction_SHA1,
+				remoteexecution.DigestFunction_SHA256,
+			},
+			ActionCacheUpdateCapabilities: &remoteexecution.ActionCacheUpdateCapabilities{
+				// TODO(edsch): Let bbb-frontend flip this to true when enabled?
+				UpdateEnabled: false,
+			},
+			// CachePriorityCapabilities: Priorities not supported.
+			// MaxBatchTotalSize: Not used by Bazel yet.
+			// TODO(edsch): Finish adding symlinks support.
+			SymlinkAbsolutePathStrategy: remoteexecution.CacheCapabilities_UNKNOWN,
+		},
+		ExecutionCapabilities: &remoteexecution.ExecutionCapabilities{
+			DigestFunction: remoteexecution.DigestFunction_SHA256,
+			ExecEnabled:    true,
+			// ExecutionPriorityCapabilities: Priorities not supported.
+		},
+		// TODO(edsch): DeprecatedApiVersion.
+		LowApiVersion:  &semver.SemVer{Major: 2},
+		HighApiVersion: &semver.SemVer{Major: 2},
+	}, nil
 }
 
 func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"io"
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -9,17 +10,23 @@ import (
 )
 
 type forwardingBuildQueue struct {
-	client remoteexecution.ExecutionClient
+	capabilitiesClient remoteexecution.CapabilitiesClient
+	executionClient    remoteexecution.ExecutionClient
 }
 
-// NewForwardingBuildQueue creates a GRPC service for the Execution
-// service that simply forwards all requests to a GRPC client. This may
-// be used by the frontend processes to forward execution requests to
+// NewForwardingBuildQueue creates a GRPC service for the Capbilities and
+// Execution service that simply forwards all requests to a GRPC client. This
+// may be used by the frontend processes to forward execution requests to
 // scheduler processes in unmodified form.
-func NewForwardingBuildQueue(client *grpc.ClientConn) remoteexecution.ExecutionServer {
+func NewForwardingBuildQueue(client *grpc.ClientConn) BuildQueue {
 	return &forwardingBuildQueue{
-		client: remoteexecution.NewExecutionClient(client),
+		capabilitiesClient: remoteexecution.NewCapabilitiesClient(client),
+		executionClient:    remoteexecution.NewExecutionClient(client),
 	}
+}
+
+func (bq *forwardingBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecution.GetCapabilitiesRequest) (*remoteexecution.ServerCapabilities, error) {
+	return bq.capabilitiesClient.GetCapabilities(ctx, in)
 }
 
 func forwardOperations(client remoteexecution.Execution_ExecuteClient, server remoteexecution.Execution_ExecuteServer) error {
@@ -38,7 +45,7 @@ func forwardOperations(client remoteexecution.Execution_ExecuteClient, server re
 }
 
 func (bq *forwardingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
-	client, err := bq.client.Execute(out.Context(), in)
+	client, err := bq.executionClient.Execute(out.Context(), in)
 	if err != nil {
 		return err
 	}
@@ -46,7 +53,7 @@ func (bq *forwardingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out 
 }
 
 func (bq *forwardingBuildQueue) WaitExecution(in *remoteexecution.WaitExecutionRequest, out remoteexecution.Execution_WaitExecutionServer) error {
-	client, err := bq.client.WaitExecution(out.Context(), in)
+	client, err := bq.executionClient.WaitExecution(out.Context(), in)
 	if err != nil {
 		return err
 	}

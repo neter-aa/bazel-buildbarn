@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 )
 
 type demultiplexingBuildQueue struct {
-	getBackend func(string) (remoteexecution.ExecutionServer, error)
+	getBackend func(string) (BuildQueue, error)
 }
 
 // NewDemultiplexingBuildQueue creates an adapter for the Execution
@@ -20,10 +21,18 @@ type demultiplexingBuildQueue struct {
 // instance given in requests. Job identifiers returned by backends are
 // prefixed with the instance name, so that successive requests may
 // demultiplex the requests later on.
-func NewDemultiplexingBuildQueue(getBackend func(string) (remoteexecution.ExecutionServer, error)) remoteexecution.ExecutionServer {
+func NewDemultiplexingBuildQueue(getBackend func(string) (BuildQueue, error)) BuildQueue {
 	return &demultiplexingBuildQueue{
 		getBackend: getBackend,
 	}
+}
+
+func (bq *demultiplexingBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecution.GetCapabilitiesRequest) (*remoteexecution.ServerCapabilities, error) {
+	backend, err := bq.getBackend(in.InstanceName)
+	if err != nil {
+		return nil, err
+	}
+	return backend.GetCapabilities(ctx, in)
 }
 
 func (bq *demultiplexingBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remoteexecution.Execution_ExecuteServer) error {
