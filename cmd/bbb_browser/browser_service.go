@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
@@ -331,9 +332,12 @@ func (s *BrowserService) handleFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Disposition", "attachment; filename="+mux.Vars(req)["name"])
 	w.Header().Set("Content-Length", strconv.FormatInt(digest.GetSizeBytes(), 10))
-	w.Header().Set("Content-Type", "application/octet-stream")
+	if utf8.ValidString(string(first[:])) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	} else {
+		w.Header().Set("Content-Type", "application/octet-stream")
+	}
 	w.Write(first[:n])
 	io.Copy(w, r)
 }
