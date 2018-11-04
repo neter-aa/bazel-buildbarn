@@ -53,7 +53,6 @@ func (be *serverLogInjectingBuildExecutor) Execute(ctx context.Context, request 
 		}
 		logBody := []byte(fmt.Sprintf(
 			"More details about this build action can be found here:\n" +
-				"\n" +
 				browserURL.String() + "\n"))
 
 		// Compute a digest of the log file.
