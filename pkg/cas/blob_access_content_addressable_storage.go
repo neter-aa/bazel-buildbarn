@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/failure"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
@@ -43,6 +44,14 @@ func (cas *blobAccessContentAddressableStorage) GetAction(ctx context.Context, d
 		return nil, err
 	}
 	return &action, nil
+}
+
+func (cas *blobAccessContentAddressableStorage) GetActionFailure(ctx context.Context, digest *util.Digest) (*failure.ActionFailure, error) {
+	var actionFailure failure.ActionFailure
+	if err := cas.getMessage(ctx, digest, &actionFailure); err != nil {
+		return nil, err
+	}
+	return &actionFailure, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) GetCommand(ctx context.Context, digest *util.Digest) (*remoteexecution.Command, error) {
@@ -91,6 +100,32 @@ func (cas *blobAccessContentAddressableStorage) GetTree(ctx context.Context, dig
 	return &tree, nil
 }
 
+func (cas *blobAccessContentAddressableStorage) putBlob(ctx context.Context, data []byte, parentDigest *util.Digest) (*util.Digest, error) {
+	// Compute new digest of data.
+	digestGenerator := parentDigest.NewDigestGenerator()
+	if _, err := digestGenerator.Write(data); err != nil {
+		return nil, err
+	}
+	digest := digestGenerator.Sum()
+
+	if err := cas.blobAccess.Put(ctx, digest, digest.GetSizeBytes(), ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
+		return nil, err
+	}
+	return digest, nil
+}
+
+func (cas *blobAccessContentAddressableStorage) putMessage(ctx context.Context, message proto.Message, parentDigest *util.Digest) (*util.Digest, error) {
+	data, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	return cas.putBlob(ctx, data, parentDigest)
+}
+
+func (cas *blobAccessContentAddressableStorage) PutActionFailure(ctx context.Context, actionFailure *failure.ActionFailure, parentDigest *util.Digest) (*util.Digest, error) {
+	return cas.putMessage(ctx, actionFailure, parentDigest)
+}
+
 func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, path string, parentDigest *util.Digest) (*util.Digest, bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -123,21 +158,10 @@ func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, pat
 	return digest, (info.Mode() & 0111) != 0, nil
 }
 
+func (cas *blobAccessContentAddressableStorage) PutLog(ctx context.Context, log []byte, parentDigest *util.Digest) (*util.Digest, error) {
+	return cas.putBlob(ctx, log, parentDigest)
+}
+
 func (cas *blobAccessContentAddressableStorage) PutTree(ctx context.Context, tree *remoteexecution.Tree, parentDigest *util.Digest) (*util.Digest, error) {
-	data, err := proto.Marshal(tree)
-	if err != nil {
-		return nil, err
-	}
-
-	// Compute new digest of data.
-	digestGenerator := parentDigest.NewDigestGenerator()
-	if _, err := digestGenerator.Write(data); err != nil {
-		return nil, err
-	}
-	digest := digestGenerator.Sum()
-
-	if err := cas.blobAccess.Put(ctx, digest, digest.GetSizeBytes(), ioutil.NopCloser(bytes.NewBuffer(data))); err != nil {
-		return nil, err
-	}
-	return digest, nil
+	return cas.putMessage(ctx, tree, parentDigest)
 }

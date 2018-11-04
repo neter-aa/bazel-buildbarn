@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
@@ -19,13 +18,10 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
-	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -61,19 +57,19 @@ func main() {
 		log.Fatal("Failed to create cache directory: ", err)
 	}
 
+	contentAddressableStorage := cas.NewDirectoryCachingContentAddressableStorage(
+		cas.NewHardlinkingContentAddressableStorage(
+			cas.NewBlobAccessContentAddressableStorage(
+				blobstore.NewExistencePreconditionBlobAccess(
+					contentAddressableStorageBlobAccess)),
+			util.DigestKeyWithoutInstance, "/cache", 10000, 1<<30),
+		util.DigestKeyWithoutInstance, 1000)
 	buildExecutor := builder.NewServerLogInjectingBuildExecutor(
 		builder.NewCachingBuildExecutor(
-			builder.NewLocalBuildExecutor(
-				cas.NewDirectoryCachingContentAddressableStorage(
-					cas.NewHardlinkingContentAddressableStorage(
-						cas.NewBlobAccessContentAddressableStorage(
-							blobstore.NewExistencePreconditionBlobAccess(
-								contentAddressableStorageBlobAccess)),
-						util.DigestKeyWithoutInstance, "/cache", 10000, 1<<30),
-					util.DigestKeyWithoutInstance, 1000)),
+			builder.NewLocalBuildExecutor(contentAddressableStorage),
 			ac.NewBlobAccessActionCache(
 				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
-		contentAddressableStorageBlobAccess,
+		contentAddressableStorage,
 		browserURL)
 
 	// Create connection with scheduler.
@@ -108,38 +104,20 @@ func subscribeAndExecute(schedulerClient scheduler.SchedulerClient, buildExecuto
 			return err
 		}
 
-		// Print URL in log at the start of the request.
-		browserURL.Path = fmt.Sprintf(
-			"/action/%s/%s/%d/",
-			request.InstanceName,
-			request.ActionDigest.Hash,
-			request.ActionDigest.SizeBytes)
-		log.Print("Action: ", browserURL.String())
-
-		response, _ := buildExecutor.Execute(stream.Context(), request)
-
-		if response.Result != nil {
-			// Print the same URL, but with the ActionResult in
-			// Base64 appended to it. This link works, even if the
-			// ActionResult doesn't end up getting cached.
-			// TODO(edsch): Remove duplication with
-			// ServerLogInjectingBuildExecutor.
-			data, err := proto.Marshal(response.Result)
-			if err != nil {
-				return err
-			}
-			browserURL.Path = fmt.Sprintf(
-				"/action/%s/%s/%d/%s",
+		// Print URL of the action into the log before execution.
+		actionURL, err := browserURL.Parse(
+			fmt.Sprintf(
+				"/action/%s/%s/%d/",
 				request.InstanceName,
 				request.ActionDigest.Hash,
-				request.ActionDigest.SizeBytes,
-				base64.URLEncoding.EncodeToString(data))
-			log.Print("ActionResult: ", browserURL.String())
+				request.ActionDigest.SizeBytes))
+		if err != nil {
+			return err
 		}
-		if s := status.FromProto(response.Status); s.Code() != codes.OK {
-			log.Print("Error: ", s)
-		}
+		log.Print("Action: ", actionURL.String())
 
+		response, _ := buildExecutor.Execute(stream.Context(), request)
+		log.Print("ExecuteResponse: ", response)
 		if err := stream.Send(response); err != nil {
 			return err
 		}

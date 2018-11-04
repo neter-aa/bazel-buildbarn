@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildkite/terminal"
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 
 	"google.golang.org/grpc/codes"
@@ -52,8 +50,8 @@ func NewBrowserService(contentAddressableStorage cas.ContentAddressableStorage, 
 		actionCache:                         actionCache,
 		templates:                           templates,
 	}
-	router.HandleFunc("/action/{instance}/{hash}/{sizeBytes}/", s.handleActionFromActionCache)
-	router.HandleFunc("/action/{instance}/{hash}/{sizeBytes}/{actionResult}", s.handleActionFromURL)
+	router.HandleFunc("/action/{instance}/{hash}/{sizeBytes}/", s.handleAction)
+	router.HandleFunc("/actionfailure/{instance}/{hash}/{sizeBytes}/", s.handleActionFailure)
 	router.HandleFunc("/command/{instance}/{hash}/{sizeBytes}/", s.handleCommand)
 	router.HandleFunc("/directory/{instance}/{hash}/{sizeBytes}/", s.handleDirectory)
 	router.HandleFunc("/file/{instance}/{hash}/{sizeBytes}/{{name}}", s.handleFile)
@@ -75,7 +73,7 @@ type logInfo struct {
 	HTML     template.HTML
 }
 
-func (s *BrowserService) handleActionFromActionCache(w http.ResponseWriter, req *http.Request) {
+func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request) {
 	digest, err := getDigestFromRequest(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -89,28 +87,27 @@ func (s *BrowserService) handleActionFromActionCache(w http.ResponseWriter, req 
 		return
 	}
 
-	s.handleAction(w, req, digest, actionResult)
+	s.handleActionCommon(w, req, digest, actionResult)
 }
 
-func (s *BrowserService) handleActionFromURL(w http.ResponseWriter, req *http.Request) {
+func (s *BrowserService) handleActionFailure(w http.ResponseWriter, req *http.Request) {
 	digest, err := getDigestFromRequest(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	data, err := base64.URLEncoding.DecodeString(mux.Vars(req)["actionResult"])
+	ctx := req.Context()
+	actionFailure, err := s.contentAddressableStorage.GetActionFailure(ctx, digest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	var actionResult remoteexecution.ActionResult
-	if err := proto.Unmarshal(data, &actionResult); err != nil {
+	actionDigest, err := digest.NewDerivedDigest(actionFailure.ActionDigest)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	s.handleAction(w, req, digest, &actionResult)
+	s.handleActionCommon(w, req, actionDigest, actionFailure.ActionResult)
 }
 
 func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance string, logDigest *remoteexecution.Digest) (*logInfo, error) {
@@ -158,7 +155,7 @@ func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance s
 	}
 }
 
-func (s *BrowserService) handleAction(w http.ResponseWriter, req *http.Request, digest *util.Digest, actionResult *remoteexecution.ActionResult) {
+func (s *BrowserService) handleActionCommon(w http.ResponseWriter, req *http.Request, digest *util.Digest, actionResult *remoteexecution.ActionResult) {
 	instance := digest.GetInstance()
 	actionInfo := struct {
 		Instance string
