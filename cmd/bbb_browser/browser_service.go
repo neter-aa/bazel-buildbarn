@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
@@ -17,6 +17,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildkite/terminal"
+	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 
 	"google.golang.org/grpc/codes"
@@ -55,8 +56,8 @@ func NewBrowserService(contentAddressableStorage cas.ContentAddressableStorage, 
 	router.HandleFunc("/actionfailure/{instance}/{hash}/{sizeBytes}/", s.handleActionFailure)
 	router.HandleFunc("/command/{instance}/{hash}/{sizeBytes}/", s.handleCommand)
 	router.HandleFunc("/directory/{instance}/{hash}/{sizeBytes}/", s.handleDirectory)
-	router.HandleFunc("/file/{instance}/{hash}/{sizeBytes}/{{name}}", s.handleFile)
-	router.HandleFunc("/tree/{instance}/{hash}/{sizeBytes}/", s.handleTree)
+	router.HandleFunc("/file/{instance}/{hash}/{sizeBytes}/{name}", s.handleFile)
+	router.HandleFunc("/tree/{instance}/{hash}/{sizeBytes}/{subdirectory:(?:.*/)?}", s.handleTree)
 	return s
 }
 
@@ -355,6 +356,68 @@ func (s *BrowserService) handleTree(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	treeInfo := struct {
+		Instance           string
+		Directory          *remoteexecution.Directory
+		HasParentDirectory bool
+	}{
+		Instance:  digest.GetInstance(),
+		Directory: tree.Root,
+	}
 
-	http.Error(w, fmt.Sprintf("%s", tree), http.StatusBadRequest)
+	// In case additional directory components are provided, we need
+	// to traverse the directories stored within.
+	if components := strings.FieldsFunc(mux.Vars(req)["subdirectory"], func(r rune) bool {
+		return r == '/'
+	}); len(components) > 0 {
+		// Construct map of all child directories.
+		children := map[string]*remoteexecution.Directory{}
+		for _, child := range tree.Children {
+			data, err := proto.Marshal(child)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			digestGenerator := digest.NewDigestGenerator()
+			if _, err := digestGenerator.Write(data); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			children[digestGenerator.Sum().GetKey(util.DigestKeyWithoutInstance)] = child
+		}
+
+		for _, component := range components {
+			// Find child with matching name.
+			childNode := func() *remoteexecution.DirectoryNode {
+				for _, directoryNode := range treeInfo.Directory.Directories {
+					if component == directoryNode.Name {
+						return directoryNode
+					}
+				}
+				return nil
+			}()
+			if childNode == nil {
+				http.Error(w, "Subdirectory in tree not found", http.StatusNotFound)
+				return
+			}
+
+			// Find corresponding child directory message.
+			childDigest, err := digest.NewDerivedDigest(childNode.Digest)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			childDirectory, ok := children[childDigest.GetKey(util.DigestKeyWithoutInstance)]
+			if !ok {
+				http.Error(w, "Failed to find child node in tree", http.StatusBadRequest)
+				return
+			}
+			treeInfo.HasParentDirectory = true
+			treeInfo.Directory = childDirectory
+		}
+	}
+
+	if err := s.templates.ExecuteTemplate(w, "page_tree.html", &treeInfo); err != nil {
+		log.Print(err)
+	}
 }
