@@ -113,6 +113,15 @@ func (be *localBuildExecutor) prepareFilesystem(ctx context.Context, request *re
 	}
 
 	// Ensure that directories where output files are stored are present.
+	for _, outputDirectory := range command.OutputDirectories {
+		outputPath, err := joinPathSafe(pathBuildRoot, outputDirectory)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(path.Dir(outputPath), 0777); err != nil {
+			return err
+		}
+	}
 	for _, outputFile := range command.OutputFiles {
 		outputPath, err := joinPathSafe(pathBuildRoot, outputFile)
 		if err != nil {
