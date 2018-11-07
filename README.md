@@ -73,9 +73,9 @@ placing the following in `.bazelrc`:
 
     # From bazel-toolchains/configs/debian8_clang/0.4.0/toolchain.bazelrc.
     build:bbb-debian8 --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-    build:bbb-debian8 --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/default:toolchain
+    build:bbb-debian8 --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.19.0/default:toolchain
     build:bbb-debian8 --extra_execution_platforms=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
-    build:bbb-debian8 --extra_toolchains=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.17.1/cpp:cc-toolchain-clang-x86_64-default
+    build:bbb-debian8 --extra_toolchains=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.19.0/cpp:cc-toolchain-clang-x86_64-default
     build:bbb-debian8 --host_javabase=@bazel_toolchains//configs/debian8_clang/0.4.0:jdk8
     build:bbb-debian8 --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
     build:bbb-debian8 --host_platform=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
@@ -104,11 +104,11 @@ meaning that you will need to add the following to your `WORKSPACE` file
 
     http_archive(
         name = "bazel_toolchains",
-        sha256 = "4329663fe6c523425ad4d3c989a8ac026b04e1acedeceb56aa4b190fa7f3973c",
-        strip_prefix = "bazel-toolchains-bc09b995c137df042bb80a395b73d7ce6f26afbe",
+        sha256 = "b5855c9a7635a877ba0c5c939395258f6a6b202901dd9f545018d57aba31b72c",
+        strip_prefix = "bazel-toolchains-6e25ae44ec4a3b14fea9506633f3f820f3b76224",
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/bc09b995c137df042bb80a395b73d7ce6f26afbe.tar.gz",
-            "https://github.com/bazelbuild/bazel-toolchains/archive/bc09b995c137df042bb80a395b73d7ce6f26afbe.tar.gz",
+            "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/6e25ae44ec4a3b14fea9506633f3f820f3b76224.tar.gz",
+            "https://github.com/bazelbuild/bazel-toolchains/archive/6e25ae44ec4a3b14fea9506633f3f820f3b76224.tar.gz",
         ],
     )
 
