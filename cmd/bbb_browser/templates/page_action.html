@@ -13,14 +13,14 @@
 <h1 class="my-4">Action</h1>
 
 {{if .Action}}
-<table class="table">
-	<tr class="d-flex">
-		<th class="col-3">Timeout:</th>
-		<td class="col-9">{{if .Action.Timeout}}{{.Action.Timeout.Seconds}} seconds{{else}}∞{{end}}</td>
+<table class="table" style="table-layout: fixed">
+	<tr>
+		<th style="width: 25%">Timeout:</th>
+		<td style="width: 75%">{{if .Action.Timeout}}{{.Action.Timeout.Seconds}} seconds{{else}}∞{{end}}</td>
 	</tr>
-	<tr class="d-flex">
-		<th class="col-3">Do not cache:</th>
-		<td class="col-9">{{if .Action.DoNotCache}}yes{{else}}no{{end}}</td>
+	<tr>
+		<th style="width: 25%">Do not cache:</th>
+		<td style="width: 75%">{{if .Action.DoNotCache}}yes{{else}}no{{end}}</td>
 	</tr>
 </table>
 {{else}}
@@ -38,10 +38,10 @@ The command of this action could not be found.
 <h2 class="my-4">Result</h2>
 
 {{if .ActionResult}}
-<table class="table">
-	<tr class="d-flex">
-		<th class="col-3">Exit code:</th>
-		<td class="col-9">
+<table class="table" style="table-layout: fixed">
+	<tr>
+		<th style="width: 25%">Exit code:</th>
+		<td style="width: 75%">
 			{{.ActionResult.ExitCode}}
 			{{if eq .ActionResult.ExitCode 0}}
 				<span class="text-success">(Success)</span>

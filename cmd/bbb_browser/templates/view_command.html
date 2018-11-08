@@ -1,7 +1,7 @@
-<table class="table">
-	<tr class="d-flex">
-		<th class="col-3">Arguments:</th>
-		<td class="col-9 text-monospace">
+<table class="table" style="table-layout: fixed">
+	<tr>
+		<th style="width: 25%">Arguments:</th>
+		<td class="text-monospace" style="width: 75%; overflow-x: scroll">
 			<div style="padding-left: 2em; text-indent: -2em">
 				{{$firstArgument := true}}
 				{{range .Arguments}}
@@ -15,21 +15,21 @@
 			</div>
 		</td>
 	</tr>
-	<tr class="d-flex">
-		<th class="col-3">Environment variables:</th>
-		<td class="col-9 text-monospace">
+	<tr>
+		<th style="width: 25%">Environment variables:</th>
+		<td class="text-monospace" style="width: 75%; overflow-x: scroll">
 			{{range .EnvironmentVariables}}
 				<b>{{.Name}}</b>={{shellquote .Value}}<br/>
 			{{end}}
 		</td>
 	</tr>
-	<tr class="d-flex">
-		<th class="col-3">Working directory:</th>
-		<td class="col-9 text-monospace">{{if .WorkingDirectory}}{{.WorkingDirectory}}{{else}}.{{end}}</td>
+	<tr>
+		<th style="style: 25%">Working directory:</th>
+		<td class="text-monospace" style="width: 75%">{{if .WorkingDirectory}}{{.WorkingDirectory}}{{else}}.{{end}}</td>
 	</tr>
-	<tr class="d-flex">
-		<th class="col-3">Platform properties:</th>
-		<td class="col-9">
+	<tr>
+		<th style="width: 25%">Platform properties:</th>
+		<td style="width: 75%">
 			{{range .Platform.Properties}}
 				<b>{{.Name}}</b> = {{.Value}}<br/>
 			{{end}}
