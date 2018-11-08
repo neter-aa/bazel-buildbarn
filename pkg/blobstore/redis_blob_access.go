@@ -36,7 +36,7 @@ func (ba *redisBlobAccess) Get(ctx context.Context, digest *util.Digest) io.Read
 		if err == redis.Nil {
 			return util.NewErrorReader(status.Errorf(codes.NotFound, err.Error()))
 		}
-		return util.NewErrorReader(err)
+		return util.NewErrorReader(status.Errorf(codes.Unavailable, err.Error()))
 	}
 	return ioutil.NopCloser(bytes.NewBuffer(value))
 }
@@ -49,13 +49,16 @@ func (ba *redisBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeByt
 	value, err := ioutil.ReadAll(r)
 	r.Close()
 	if err != nil {
-		return err
+		return status.Errorf(codes.Unavailable, err.Error())
 	}
 	return ba.redisClient.Set(digest.GetKey(ba.blobKeyFormat), value, 0).Err()
 }
 
 func (ba *redisBlobAccess) Delete(ctx context.Context, digest *util.Digest) error {
-	return ba.redisClient.Del(digest.GetKey(ba.blobKeyFormat)).Err()
+	if err := ba.redisClient.Del(digest.GetKey(ba.blobKeyFormat)).Err(); err != nil {
+		return status.Errorf(codes.Unavailable, err.Error())
+	}
+	return nil
 }
 
 func (ba *redisBlobAccess) FindMissing(ctx context.Context, digests []*util.Digest) ([]*util.Digest, error) {
@@ -72,9 +75,8 @@ func (ba *redisBlobAccess) FindMissing(ctx context.Context, digests []*util.Dige
 	for _, digest := range digests {
 		cmds = append(cmds, pipeline.Exists(digest.GetKey(ba.blobKeyFormat)))
 	}
-	_, err := pipeline.Exec()
-	if err != nil {
-		return nil, err
+	if _, err := pipeline.Exec(); err != nil {
+		return nil, status.Errorf(codes.Unavailable, err.Error())
 	}
 
 	var missing []*util.Digest
