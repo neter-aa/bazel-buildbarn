@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -87,6 +88,19 @@ func TestExistencePreconditionBlobAccessGetNotFound(t *testing.T) {
 	s := status.Convert(err)
 	require.Equal(t, codes.FailedPrecondition, s.Code())
 	require.Equal(t, "Blob doesn't exist!", s.Message())
+
+	// Metadata of the error should indicate which blob is missing.
+	details := s.Details()
+	require.Equal(t, 1, len(details))
+	require.Equal(t, details[0], &errdetails.PreconditionFailure{
+		Violations: []*errdetails.PreconditionFailure_Violation{
+			{
+				Type:    "MISSING",
+				Subject: "blobs/c015ad6ddaf8bb50689d2d7cbf1539dff6dd84473582a08ed1d15d841f4254f4/7",
+			},
+		},
+	})
+
 	require.NoError(t, r.Close())
 }
 
