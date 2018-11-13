@@ -50,7 +50,11 @@ func (ba *merkleBlobAccess) Get(ctx context.Context, digest *util.Digest) io.Rea
 func (ba *merkleBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {
 	digestSizeBytes := digest.GetSizeBytes()
 	if digestSizeBytes != sizeBytes {
-		log.Fatal("Called into CAS to store non-CAS object")
+		return status.Errorf(
+			codes.InvalidArgument,
+			"Attempted to store a blob of %d bytes in size, while %d bytes were expected",
+			sizeBytes,
+			digestSizeBytes)
 	}
 	return ba.BlobAccess.Put(
 		ctx, digest, digestSizeBytes,

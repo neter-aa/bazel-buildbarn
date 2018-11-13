@@ -73,6 +73,25 @@ func TestMerkleBlobAccessSuccess(t *testing.T) {
 	}), []byte("And another test"))
 }
 
+func TestMerkleBlobAccessSizeMismatch(t *testing.T) {
+	ctrl, ctx := gomock.WithContext(context.Background(), t)
+	defer ctrl.Finish()
+
+	blobAccess := NewMerkleBlobAccess(mock.NewMockBlobAccess(ctrl))
+	s := status.Convert(blobAccess.Put(
+		ctx,
+		util.MustNewDigest(
+			"freebsd12",
+			&remoteexecution.Digest{
+				Hash:      "3e25960a79dbc69b674cd4ec67a72c62",
+				SizeBytes: 11,
+			}),
+		5,
+		ioutil.NopCloser(bytes.NewBufferString("Hello"))))
+	require.Equal(t, codes.InvalidArgument, s.Code())
+	require.Equal(t, "Attempted to store a blob of 5 bytes in size, while 11 bytes were expected", s.Message())
+}
+
 func TestMerkleBlobAccessMalformedData(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
@@ -121,7 +140,6 @@ func TestMerkleBlobAccessMalformedData(t *testing.T) {
 		s = status.Convert(err)
 		require.Equal(t, codes.InvalidArgument, s.Code())
 		require.Equal(t, errorMessage, s.Message())
-		require.NoError(t, r.Close())
 	}
 	testBadData(
 		util.MustNewDigest(
