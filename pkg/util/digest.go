@@ -144,6 +144,10 @@ func (d *Digest) GetKey(format DigestKeyFormat) string {
 	}
 }
 
+func (d *Digest) String() string {
+	return d.GetKey(DigestKeyWithInstance)
+}
+
 // NewHasher creates a standard hash.Hash object that may be used to
 // compute a checksum of data. The hash.Hash object uses the same
 // algorithm as the one that was used to create the digest, making it
