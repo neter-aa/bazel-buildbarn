@@ -36,7 +36,7 @@ func newOffsetRecord(digest *util.Digest, offset uint64) offsetRecord {
 	var offsetRecord offsetRecord
 	copy(offsetRecord[:sha256.Size], digest.GetHash())
 	binary.LittleEndian.PutUint32(offsetRecord[sha256.Size:], uint32(digest.GetSizeBytes()))
-	binary.LittleEndian.PutUint64(offsetRecord[sha256.Size+8:], offset)
+	binary.LittleEndian.PutUint64(offsetRecord[sha256.Size+4+4:], offset)
 	return offsetRecord
 }
 
