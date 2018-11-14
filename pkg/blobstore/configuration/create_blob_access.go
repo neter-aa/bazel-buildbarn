@@ -75,7 +75,9 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		}
 
 		implementation, err = circular.NewCircularBlobAccess(
-			circular.NewFileOffsetStore(offsetFile, backend.Circular.OffsetFileSizeBytes),
+			circular.NewCachingOffsetStore(
+				circular.NewFileOffsetStore(offsetFile, backend.Circular.OffsetFileSizeBytes),
+				uint(backend.Circular.OffsetCacheSize)),
 			circular.NewFileDataStore(dataFile, backend.Circular.DataFileSizeBytes),
 			backend.Circular.DataFileSizeBytes,
 			circular.NewFileStateStore(stateFile))

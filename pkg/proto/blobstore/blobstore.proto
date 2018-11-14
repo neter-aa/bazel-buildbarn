@@ -42,6 +42,9 @@ message CircularBlobAccessConfiguration {
 
     // Maximum size of the circular file containing data.
     uint64 data_file_size_bytes = 3;
+
+    // Number of offset entries to cache in memory.
+    uint32 offset_cache_size = 4;
 }
 
 message RedisBlobAccessConfiguration {
