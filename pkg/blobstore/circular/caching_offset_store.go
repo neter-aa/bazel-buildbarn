@@ -14,6 +14,13 @@ type cachingOffsetStore struct {
 	table   []cachedRecord
 }
 
+// NewCachingOffsetStore is an adapter for OffsetStore that caches
+// digests returned by/provided to previous calls of Get() and Put().
+// Cached entries are stored in a fixed-size hash table.
+//
+// The purpose of this adapter is to significantly reduce the number of
+// read operations on underlying storage. In the end it should reduce
+// the running time of FindMissing() operations.
 func NewCachingOffsetStore(backend OffsetStore, size uint) OffsetStore {
 	return &cachingOffsetStore{
 		backend: backend,
