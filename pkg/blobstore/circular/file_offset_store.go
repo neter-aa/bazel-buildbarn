@@ -2,11 +2,9 @@ package circular
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"io"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -30,19 +28,18 @@ func init() {
 	prometheus.MustRegister(operationsIterations)
 }
 
-type offsetRecord [sha256.Size + 4 + 4 + 8]byte
+type offsetRecord [len(SimpleDigest{}) + 4 + 8]byte
 
-func newOffsetRecord(digest *util.Digest, offset uint64) offsetRecord {
+func newOffsetRecord(digest SimpleDigest, offset uint64) offsetRecord {
 	var offsetRecord offsetRecord
-	copy(offsetRecord[:sha256.Size], digest.GetHash())
-	binary.LittleEndian.PutUint32(offsetRecord[sha256.Size:], uint32(digest.GetSizeBytes()))
-	binary.LittleEndian.PutUint64(offsetRecord[sha256.Size+4+4:], offset)
+	copy(offsetRecord[:], digest[:])
+	binary.LittleEndian.PutUint64(offsetRecord[len(SimpleDigest{})+4:], offset)
 	return offsetRecord
 }
 
 func (or *offsetRecord) getSlot() uint32 {
 	slot := uint32(2166136261)
-	for i := sha256.Size + 4 + 4; i > 0; i-- {
+	for i := len(SimpleDigest{}) + 4; i > 0; i-- {
 		slot ^= uint32(or[i-1])
 		slot *= 16777619
 	}
@@ -50,15 +47,15 @@ func (or *offsetRecord) getSlot() uint32 {
 }
 
 func (or *offsetRecord) getAttempt() uint32 {
-	return binary.LittleEndian.Uint32(or[sha256.Size+4:])
+	return binary.LittleEndian.Uint32(or[len(SimpleDigest{}):])
 }
 
 func (or *offsetRecord) getOffset() uint64 {
-	return binary.LittleEndian.Uint64(or[sha256.Size+4+4:])
+	return binary.LittleEndian.Uint64(or[len(SimpleDigest{})+4:])
 }
 
 func (or *offsetRecord) digestAndAttemptEqual(other offsetRecord) bool {
-	return bytes.Equal(or[:sha256.Size+4+4], other[:sha256.Size+4+4])
+	return bytes.Equal(or[:len(SimpleDigest{})+4], other[:len(SimpleDigest{})+4])
 }
 
 func (or *offsetRecord) offsetInBounds(minOffset uint64, maxOffset uint64) bool {
@@ -68,7 +65,7 @@ func (or *offsetRecord) offsetInBounds(minOffset uint64, maxOffset uint64) bool 
 
 func (or *offsetRecord) withAttempt(attempt uint32) offsetRecord {
 	newRecord := *or
-	binary.LittleEndian.PutUint32(newRecord[sha256.Size+4:], attempt)
+	binary.LittleEndian.PutUint32(newRecord[len(SimpleDigest{}):], attempt)
 	return newRecord
 }
 
@@ -102,7 +99,7 @@ func (os *fileOffsetStore) putRecordAtPosition(record offsetRecord, position int
 	return err
 }
 
-func (os *fileOffsetStore) Get(digest *util.Digest, minOffset uint64, maxOffset uint64) (uint64, bool, error) {
+func (os *fileOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffset uint64) (uint64, bool, error) {
 	record := newOffsetRecord(digest, 0)
 	for iteration := uint32(1); ; iteration++ {
 		if iteration >= maximumIterations {
@@ -159,7 +156,7 @@ func (os *fileOffsetStore) putRecord(record offsetRecord, minOffset uint64, maxO
 	return record.withAttempt(attempt + 1), true, nil
 }
 
-func (os *fileOffsetStore) Put(digest *util.Digest, offset uint64, minOffset uint64, maxOffset uint64) error {
+func (os *fileOffsetStore) Put(digest SimpleDigest, offset uint64, minOffset uint64, maxOffset uint64) error {
 	record := newOffsetRecord(digest, offset)
 	for iteration := 1; ; iteration++ {
 		if iteration > maximumIterations {
