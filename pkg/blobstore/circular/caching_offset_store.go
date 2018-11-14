@@ -21,6 +21,8 @@ type cachingOffsetStore struct {
 // The purpose of this adapter is to significantly reduce the number of
 // read operations on underlying storage. In the end it should reduce
 // the running time of FindMissing() operations.
+//
+// TODO(edsch): Should we add negative caching as well?
 func NewCachingOffsetStore(backend OffsetStore, size uint) OffsetStore {
 	return &cachingOffsetStore{
 		backend: backend,
