@@ -2,6 +2,7 @@ package circular
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -113,12 +114,18 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 	}
 	ba.lock.Unlock()
 
-	// Write the data to storage and make it visible.
+	// Write the data to storage.
 	if err := ba.dataStore.Put(r, offset); err != nil {
 		return err
 	}
+
+	var err error
 	ba.lock.Lock()
-	err := ba.offsetStore.Put(digest, offset, ba.readCursor, ba.writeCursor)
+	if offset >= ba.readCursor && offset <= ba.writeCursor {
+		err = ba.offsetStore.Put(digest, offset, ba.readCursor, ba.writeCursor)
+	} else {
+		err = errors.New("Data became stale before write completed")
+	}
 	ba.lock.Unlock()
 	return err
 
