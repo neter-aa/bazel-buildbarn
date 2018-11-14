@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/circular"
 	pb "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/aws/aws-sdk-go/aws"
@@ -54,6 +57,31 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 	var implementation blobstore.BlobAccess
 	var backendType string
 	switch backend := config.Backend.(type) {
+	case *pb.BlobAccessConfiguration_Circular:
+		backendType = "circular"
+
+		// Open input files.
+		offsetFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "offset"), os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+		dataFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "data"), os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+		stateFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "state"), os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+
+		implementation, err = circular.NewCircularBlobAccess(
+			circular.NewFileOffsetStore(offsetFile, backend.Circular.OffsetFileSizeBytes),
+			circular.NewFileDataStore(dataFile, backend.Circular.DataFileSizeBytes),
+			backend.Circular.DataFileSizeBytes,
+			circular.NewFileStateStore(stateFile))
+		if err != nil {
+			return nil, err
+		}
 	case *pb.BlobAccessConfiguration_Redis:
 		backendType = "redis"
 		implementation = blobstore.NewRedisBlobAccess(
