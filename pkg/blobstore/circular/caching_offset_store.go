@@ -31,16 +31,14 @@ func NewCachingOffsetStore(backend OffsetStore, size uint) OffsetStore {
 	}
 }
 
-func (os *cachingOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffset uint64) (uint64, int64, bool, error) {
+func (os *cachingOffsetStore) Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error) {
 	slot := binary.LittleEndian.Uint32(digest[:]) % uint32(len(os.table))
 	foundRecord := os.table[slot]
-	if foundRecord.digest == digest &&
-		foundRecord.offset >= minOffset && foundRecord.offset <= maxOffset &&
-		foundRecord.offset+uint64(foundRecord.length) <= maxOffset {
+	if foundRecord.digest == digest && cursors.Contains(foundRecord.offset, foundRecord.length) {
 		return foundRecord.offset, foundRecord.length, true, nil
 	}
 
-	offset, length, found, err := os.backend.Get(digest, minOffset, maxOffset)
+	offset, length, found, err := os.backend.Get(digest, cursors)
 	if err == nil && found {
 		os.table[slot] = cachedRecord{
 			digest: digest,
@@ -51,8 +49,8 @@ func (os *cachingOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffs
 	return offset, length, found, err
 }
 
-func (os *cachingOffsetStore) Put(digest SimpleDigest, offset uint64, length int64, minOffset uint64, maxOffset uint64) error {
-	if err := os.backend.Put(digest, offset, length, minOffset, maxOffset); err != nil {
+func (os *cachingOffsetStore) Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error {
+	if err := os.backend.Put(digest, offset, length, cursors); err != nil {
 		return err
 	}
 

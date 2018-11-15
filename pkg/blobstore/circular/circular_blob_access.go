@@ -16,8 +16,8 @@ import (
 )
 
 type OffsetStore interface {
-	Get(digest SimpleDigest, minOffset uint64, maxOffset uint64) (uint64, int64, bool, error)
-	Put(digest SimpleDigest, offset uint64, length int64, minOffset uint64, maxOffset uint64) error
+	Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error)
+	Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error
 }
 
 type DataStore interface {
@@ -26,8 +26,8 @@ type DataStore interface {
 }
 
 type StateStore interface {
-	Get() (uint64, uint64, error)
-	Put(readCursor uint64, writeCursor uint64) error
+	Get() (Cursors, error)
+	Put(cursors Cursors) error
 }
 
 type circularBlobAccess struct {
@@ -37,14 +37,13 @@ type circularBlobAccess struct {
 
 	// Fields protected by the lock.
 	lock        sync.Mutex
-	readCursor  uint64
-	writeCursor uint64
+	cursors     Cursors
 	offsetStore OffsetStore
 	stateStore  StateStore
 }
 
 func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, dataSize uint64, stateStore StateStore) (blobstore.BlobAccess, error) {
-	readCursor, writeCursor, err := stateStore.Get()
+	cursors, err := stateStore.Get()
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +53,7 @@ func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, dataSiz
 		dataStore:   dataStore,
 		dataSize:    dataSize,
 		stateStore:  stateStore,
-
-		readCursor:  readCursor,
-		writeCursor: writeCursor,
+		cursors:     cursors,
 	}
 	go ba.flushStateStore()
 	return ba, nil
@@ -67,11 +64,10 @@ func (ba *circularBlobAccess) flushStateStore() {
 		time.Sleep(time.Minute)
 
 		ba.lock.Lock()
-		readCursor := ba.readCursor
-		writeCursor := ba.writeCursor
+		cursors := ba.cursors
 		ba.lock.Unlock()
 
-		if err := ba.stateStore.Put(readCursor, writeCursor); err != nil {
+		if err := ba.stateStore.Put(cursors); err != nil {
 			log.Print("Failed to write to state store: ", err)
 		}
 	}
@@ -79,7 +75,7 @@ func (ba *circularBlobAccess) flushStateStore() {
 
 func (ba *circularBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	ba.lock.Lock()
-	offset, length, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.readCursor, ba.writeCursor)
+	offset, length, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors)
 	ba.lock.Unlock()
 	if err != nil {
 		return 0, nil, err
@@ -94,13 +90,7 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 
 	// Allocate space in the data store.
 	ba.lock.Lock()
-	offset := ba.writeCursor
-	ba.writeCursor += uint64(sizeBytes)
-	if ba.readCursor > ba.writeCursor {
-		ba.readCursor = ba.writeCursor
-	} else if ba.readCursor+ba.dataSize < ba.writeCursor {
-		ba.readCursor = ba.writeCursor - ba.dataSize
-	}
+	offset := ba.cursors.Allocate(sizeBytes, ba.dataSize)
 	ba.lock.Unlock()
 
 	// Write the data to storage.
@@ -110,8 +100,8 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 
 	var err error
 	ba.lock.Lock()
-	if offset >= ba.readCursor && offset <= ba.writeCursor && offset+uint64(sizeBytes) <= ba.writeCursor {
-		err = ba.offsetStore.Put(NewSimpleDigest(digest), offset, sizeBytes, ba.readCursor, ba.writeCursor)
+	if ba.cursors.Contains(offset, sizeBytes) {
+		err = ba.offsetStore.Put(NewSimpleDigest(digest), offset, sizeBytes, ba.cursors)
 	} else {
 		err = errors.New("Data became stale before write completed")
 	}
@@ -124,13 +114,10 @@ func (ba *circularBlobAccess) Delete(ctx context.Context, digest *util.Digest) e
 	ba.lock.Lock()
 	defer ba.lock.Unlock()
 
-	if offset, _, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.readCursor, ba.writeCursor); err != nil {
+	if offset, length, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors); err != nil {
 		return err
 	} else if ok {
-		ba.readCursor = offset + 1
-		if ba.writeCursor < ba.readCursor {
-			ba.writeCursor = ba.readCursor
-		}
+		ba.cursors.Invalidate(offset, length)
 	}
 	return nil
 }
@@ -141,7 +128,7 @@ func (ba *circularBlobAccess) FindMissing(ctx context.Context, digests []*util.D
 
 	var missingDigests []*util.Digest
 	for _, digest := range digests {
-		if _, _, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.readCursor, ba.writeCursor); err != nil {
+		if _, _, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors); err != nil {
 			return nil, err
 		} else if !ok {
 			missingDigests = append(missingDigests, digest)

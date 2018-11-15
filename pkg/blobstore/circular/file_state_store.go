@@ -16,28 +16,31 @@ func NewFileStateStore(file ReadWriterAt) StateStore {
 	}
 }
 
-func (ss *fileStateStore) Get() (uint64, uint64, error) {
+func (ss *fileStateStore) Get() (Cursors, error) {
 	var data [16]byte
 	if _, err := ss.file.ReadAt(data[:], 0); err == io.EOF {
-		return 0, 0, nil
+		return Cursors{}, nil
 	} else if err != nil {
-		return 0, 0, err
+		return Cursors{}, err
 	}
 	readCursor := binary.LittleEndian.Uint64(data[:])
 	writeCursor := binary.LittleEndian.Uint64(data[8:])
 	if readCursor > writeCursor {
-		return 0, 0, nil
+		return Cursors{}, nil
 	}
-	return readCursor, writeCursor, nil
+	return Cursors{
+		Read:  readCursor,
+		Write: writeCursor,
+	}, nil
 }
 
-func (ss *fileStateStore) Put(readCursor uint64, writeCursor uint64) error {
-	if readCursor > writeCursor {
-		log.Fatalf("Attempted to write cursors %d > %d", readCursor, writeCursor)
+func (ss *fileStateStore) Put(cursors Cursors) error {
+	if cursors.Read > cursors.Write {
+		log.Fatalf("Attempted to write cursors %d > %d", cursors.Read, cursors.Write)
 	}
 	var data [16]byte
-	binary.LittleEndian.PutUint64(data[:], readCursor)
-	binary.LittleEndian.PutUint64(data[8:], writeCursor)
+	binary.LittleEndian.PutUint64(data[:], cursors.Read)
+	binary.LittleEndian.PutUint64(data[8:], cursors.Write)
 	_, err := ss.file.WriteAt(data[:], 0)
 	return err
 }
