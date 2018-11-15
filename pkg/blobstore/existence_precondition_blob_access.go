@@ -27,34 +27,22 @@ func NewExistencePreconditionBlobAccess(blobAccess BlobAccess) BlobAccess {
 	}
 }
 
-func (ba *existencePreconditionBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
-	return &existencePreconditionReader{
-		ReadCloser: ba.BlobAccess.Get(ctx, digest),
-		digest:     digest,
-	}
-}
-
-type existencePreconditionReader struct {
-	io.ReadCloser
-	digest *util.Digest
-}
-
-func (r *existencePreconditionReader) Read(p []byte) (int, error) {
-	n, err := r.ReadCloser.Read(p)
+func (ba *existencePreconditionBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
+	length, r, err := ba.BlobAccess.Get(ctx, digest)
 	if s := status.Convert(err); s.Code() == codes.NotFound {
 		s, err := status.New(codes.FailedPrecondition, s.Message()).WithDetails(
 			&errdetails.PreconditionFailure{
 				Violations: []*errdetails.PreconditionFailure_Violation{
 					{
 						Type:    "MISSING",
-						Subject: fmt.Sprintf("blobs/%s/%d", hex.EncodeToString(r.digest.GetHash()), r.digest.GetSizeBytes()),
+						Subject: fmt.Sprintf("blobs/%s/%d", hex.EncodeToString(digest.GetHash()), digest.GetSizeBytes()),
 					},
 				},
 			})
 		if err != nil {
-			return n, err
+			return 0, nil, err
 		}
-		return n, s.Err()
+		return 0, nil, s.Err()
 	}
-	return n, err
+	return length, r, err
 }

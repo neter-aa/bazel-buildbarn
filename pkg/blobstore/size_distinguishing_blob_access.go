@@ -26,7 +26,7 @@ func NewSizeDistinguishingBlobAccess(smallBlobAccess BlobAccess, largeBlobAccess
 	}
 }
 
-func (ba *sizeDistinguishingBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
+func (ba *sizeDistinguishingBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	if digest.GetSizeBytes() <= ba.cutoffSizeBytes {
 		return ba.smallBlobAccess.Get(ctx, digest)
 	}

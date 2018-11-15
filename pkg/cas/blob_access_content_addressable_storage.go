@@ -29,7 +29,10 @@ func NewBlobAccessContentAddressableStorage(blobAccess blobstore.BlobAccess) Con
 
 func (cas *blobAccessContentAddressableStorage) getMessage(ctx context.Context, digest *util.Digest, message proto.Message) error {
 	// TODO(edsch): Reject fetching overly large blobs.
-	r := cas.blobAccess.Get(ctx, digest)
+	_, r, err := cas.blobAccess.Get(ctx, digest)
+	if err != nil {
+		return err
+	}
 	data, err := ioutil.ReadAll(r)
 	r.Close()
 	if err != nil {
@@ -81,7 +84,10 @@ func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, dig
 	}
 	defer w.Close()
 
-	r := cas.blobAccess.Get(ctx, digest)
+	_, r, err := cas.blobAccess.Get(ctx, digest)
+	if err != nil {
+		return err
+	}
 	_, err = io.Copy(w, r)
 	r.Close()
 

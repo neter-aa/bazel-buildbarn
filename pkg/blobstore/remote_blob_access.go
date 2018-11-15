@@ -34,21 +34,23 @@ func NewRemoteBlobAccess(address, prefix string) BlobAccess {
 	}
 }
 
-func (ba *remoteBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
+func (ba *remoteBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, hex.EncodeToString(digest.GetHash()))
 	resp, err := ctxhttp.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		fmt.Printf("Error getting digest. %s\n", err)
-		return util.NewErrorReader(err)
+		return 0, nil, err
 	}
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:
-		return util.NewErrorReader(status.Error(codes.NotFound, url))
+		resp.Body.Close()
+		return 0, nil, status.Error(codes.NotFound, url)
 	case http.StatusOK:
-		return resp.Body
+		return resp.ContentLength, resp.Body, nil
 	default:
-		return util.NewErrorReader(convertHTTPUnexpectedStatus(resp))
+		resp.Body.Close()
+		return 0, nil, convertHTTPUnexpectedStatus(resp)
 	}
 }
 

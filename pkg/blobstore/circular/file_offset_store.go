@@ -41,23 +41,25 @@ func init() {
 }
 
 // offsetRecord contains the hash table entries written to disk. They
-// consist of three components:
+// consist of four components:
 //
 // - A simple digest of the blob (hash and size),
 // - The attempt (i.e., how many times this entry got pushed to its next
 //   preferential slot in the hash table).
 // - The offset of the blob's data within the data file.
+// - The length of the blob's data within the data file.
 //
 // The attempt is part of the record, as it makes it possible to
 // distinguish a record from random garbage data. It allows us to
 // validate that an entry could have been stored in that location in the
 // first place.
-type offsetRecord [len(SimpleDigest{}) + 4 + 8]byte
+type offsetRecord [len(SimpleDigest{}) + 4 + 8 + 8]byte
 
-func newOffsetRecord(digest SimpleDigest, offset uint64) offsetRecord {
+func newOffsetRecord(digest SimpleDigest, offset uint64, length int64) offsetRecord {
 	var offsetRecord offsetRecord
 	copy(offsetRecord[:], digest[:])
 	binary.LittleEndian.PutUint64(offsetRecord[len(SimpleDigest{})+4:], offset)
+	binary.LittleEndian.PutUint64(offsetRecord[len(SimpleDigest{})+4+8:], uint64(length))
 	return offsetRecord
 }
 
@@ -80,13 +82,18 @@ func (or *offsetRecord) getOffset() uint64 {
 	return binary.LittleEndian.Uint64(or[len(SimpleDigest{})+4:])
 }
 
+func (or *offsetRecord) getLength() int64 {
+	return int64(binary.LittleEndian.Uint64(or[len(SimpleDigest{})+4+8:]))
+}
+
 func (or *offsetRecord) digestAndAttemptEqual(other offsetRecord) bool {
 	return bytes.Equal(or[:len(SimpleDigest{})+4], other[:len(SimpleDigest{})+4])
 }
 
-func (or *offsetRecord) offsetInBounds(minOffset uint64, maxOffset uint64) bool {
+func (or *offsetRecord) offsetAndLengthInBounds(minOffset uint64, maxOffset uint64) bool {
 	offset := or.getOffset()
-	return offset >= minOffset && offset <= maxOffset
+	length := or.getLength()
+	return offset >= minOffset && offset <= maxOffset && length >= 0 && offset+uint64(length) <= maxOffset
 }
 
 func (or *offsetRecord) withAttempt(attempt uint32) offsetRecord {
@@ -136,12 +143,12 @@ func (os *fileOffsetStore) putRecordAtPosition(record offsetRecord, position int
 	return err
 }
 
-func (os *fileOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffset uint64) (uint64, bool, error) {
-	record := newOffsetRecord(digest, 0)
+func (os *fileOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffset uint64) (uint64, int64, bool, error) {
+	record := newOffsetRecord(digest, 0, 0)
 	for iteration := uint32(1); ; iteration++ {
 		if iteration >= maximumIterations {
 			operationsIterations.WithLabelValues("Get", "TooManyIterations").Observe(float64(iteration))
-			return 0, false, nil
+			return 0, 0, false, nil
 		}
 
 		lookupRecord := record.withAttempt(iteration - 1)
@@ -149,19 +156,19 @@ func (os *fileOffsetStore) Get(digest SimpleDigest, minOffset uint64, maxOffset 
 		storedRecord, err := os.getRecordAtPosition(position)
 		if err != nil {
 			operationsIterations.WithLabelValues("Get", "Error").Observe(float64(iteration))
-			return 0, false, err
+			return 0, 0, false, err
 		}
-		if !storedRecord.offsetInBounds(minOffset, maxOffset) {
+		if !storedRecord.offsetAndLengthInBounds(minOffset, maxOffset) {
 			operationsIterations.WithLabelValues("Get", "NotFound").Observe(float64(iteration))
-			return 0, false, nil
+			return 0, 0, false, nil
 		}
 		if storedRecord.digestAndAttemptEqual(lookupRecord) {
 			operationsIterations.WithLabelValues("Get", "Success").Observe(float64(iteration))
-			return storedRecord.getOffset(), true, nil
+			return storedRecord.getOffset(), storedRecord.getLength(), true, nil
 		}
 		if os.getPositionOfSlot(storedRecord.getSlot()) != position {
 			operationsIterations.WithLabelValues("Get", "NotFound").Observe(float64(iteration))
-			return 0, false, nil
+			return 0, 0, false, nil
 		}
 	}
 }
@@ -176,7 +183,7 @@ func (os *fileOffsetStore) putRecord(record offsetRecord, minOffset uint64, maxO
 		return offsetRecord{}, false, err
 	}
 	oldAttempt := oldRecord.getAttempt()
-	if !oldRecord.offsetInBounds(minOffset, maxOffset) ||
+	if !oldRecord.offsetAndLengthInBounds(minOffset, maxOffset) ||
 		oldAttempt >= maximumIterations-1 ||
 		os.getPositionOfSlot(oldRecord.getSlot()) != position {
 		// Record at this position is invalid/outdated.
@@ -199,10 +206,10 @@ func (os *fileOffsetStore) putRecord(record offsetRecord, minOffset uint64, maxO
 	return record.withAttempt(attempt + 1), true, nil
 }
 
-func (os *fileOffsetStore) Put(digest SimpleDigest, offset uint64, minOffset uint64, maxOffset uint64) error {
+func (os *fileOffsetStore) Put(digest SimpleDigest, offset uint64, length int64, minOffset uint64, maxOffset uint64) error {
 	// Insert the new record. Doing this may yield another that got
 	// displaced. Iteratively try to re-insert those.
-	record := newOffsetRecord(digest, offset)
+	record := newOffsetRecord(digest, offset, length)
 	for iteration := 1; ; iteration++ {
 		if iteration > maximumIterations {
 			operationsIterations.WithLabelValues("Put", "TooManyIterations").Observe(float64(iteration))

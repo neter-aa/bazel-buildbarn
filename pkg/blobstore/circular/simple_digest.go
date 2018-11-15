@@ -11,11 +11,8 @@ import (
 // storage backend uses.
 //
 // Digests are encoded by storing the hash, followed by the size. Enough
-// space is left for a SHA-256 sum. For the size, only four bytes are
-// allocated. This shouldn't be a problem in practice, as conversion of
-// Digests to SimpleDigests is unidirectional. Furthermore, layers above
-// (e.g., MerkleBlobAccess) already ensure integrity.
-type SimpleDigest [sha256.Size + 4]byte
+// space is left for a SHA-256 sum.
+type SimpleDigest [sha256.Size + 8]byte
 
 // NewSimpleDigest converts a Digest to a SimpleDigest.
 func NewSimpleDigest(digest *util.Digest) SimpleDigest {

@@ -49,12 +49,12 @@ func NewMetricsBlobAccess(blobAccess BlobAccess, name string) BlobAccess {
 	}
 }
 
-func (ba *metricsBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
+func (ba *metricsBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Get").Inc()
 	timeStart := time.Now()
-	r := ba.blobAccess.Get(ctx, digest)
+	length, r, err := ba.blobAccess.Get(ctx, digest)
 	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Get").Observe(time.Now().Sub(timeStart).Seconds())
-	return r
+	return length, r, err
 }
 
 func (ba *metricsBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {

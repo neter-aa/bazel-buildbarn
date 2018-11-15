@@ -29,22 +29,37 @@ func NewMerkleBlobAccess(blobAccess BlobAccess) BlobAccess {
 	}
 }
 
-func (ba *merkleBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
-	return newChecksumValidatingReader(
+func (ba *merkleBlobAccess) discardBadBlob(ctx context.Context, digest *util.Digest) {
+	// Trigger blob deletion in case we detect data
+	// corruption. This will cause future calls to
+	// FindMissing() to indicate absence, causing clients to
+	// re-upload them and/or build actions to be retried.
+	if err := ba.BlobAccess.Delete(ctx, digest); err == nil {
+		log.Printf("Successfully deleted corrupted blob %s", digest)
+	} else {
+		log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
+	}
+}
+
+func (ba *merkleBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
+	length, r, err := ba.BlobAccess.Get(ctx, digest)
+	if err != nil {
+		return 0, nil, err
+	}
+	if digestSizeBytes := digest.GetSizeBytes(); length != digestSizeBytes {
+		r.Close()
+		ba.discardBadBlob(ctx, digest)
+		return 0, nil, status.Errorf(
+			codes.Internal,
+			"Blob is %d bytes in size, while %d bytes were expected",
+			length,
+			digestSizeBytes)
+	}
+	return length, newChecksumValidatingReader(
 		digest,
-		ba.BlobAccess.Get(ctx, digest),
-		func() {
-			// Trigger blob deletion in case we detect data
-			// corruption. This will cause future calls to
-			// FindMissing() to indicate absence, causing clients to
-			// re-upload them and/or build actions to be retried.
-			if err := ba.BlobAccess.Delete(ctx, digest); err == nil {
-				log.Printf("Successfully deleted corrupted blob %s", digest)
-			} else {
-				log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
-			}
-		},
-		codes.Internal)
+		r,
+		func() { ba.discardBadBlob(ctx, digest) },
+		codes.Internal), nil
 }
 
 func (ba *merkleBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {
@@ -52,7 +67,7 @@ func (ba *merkleBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBy
 	if digestSizeBytes != sizeBytes {
 		return status.Errorf(
 			codes.InvalidArgument,
-			"Attempted to store a blob of %d bytes in size, while %d bytes were expected",
+			"Blob is %d bytes in size, while %d bytes were expected",
 			sizeBytes,
 			digestSizeBytes)
 	}

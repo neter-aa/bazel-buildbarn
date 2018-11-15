@@ -133,7 +133,10 @@ func (s *BrowserService) getLogInfo(ctx context.Context, name string, instance s
 		}, nil
 	}
 
-	r := s.contentAddressableStorageBlobAccess.Get(ctx, digest)
+	_, r, err := s.contentAddressableStorageBlobAccess.Get(ctx, digest)
+	if err != nil {
+		return nil, err
+	}
 	data, err := ioutil.ReadAll(r)
 	r.Close()
 	if err == nil {
@@ -319,7 +322,11 @@ func (s *BrowserService) handleFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	ctx := req.Context()
-	r := s.contentAddressableStorageBlobAccess.Get(ctx, digest)
+	_, r, err := s.contentAddressableStorageBlobAccess.Get(ctx, digest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	defer r.Close()
 
 	// Attempt to read the first chunk of data to see whether we can

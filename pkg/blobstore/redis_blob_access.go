@@ -27,18 +27,18 @@ func NewRedisBlobAccess(redisClient *redis.Client, blobKeyFormat util.DigestKeyF
 	}
 }
 
-func (ba *redisBlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
+func (ba *redisBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	if err := ctx.Err(); err != nil {
-		return util.NewErrorReader(err)
+		return 0, nil, err
 	}
 	value, err := ba.redisClient.Get(digest.GetKey(ba.blobKeyFormat)).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return util.NewErrorReader(status.Errorf(codes.NotFound, err.Error()))
+			return 0, nil, status.Errorf(codes.NotFound, err.Error())
 		}
-		return util.NewErrorReader(status.Errorf(codes.Unavailable, err.Error()))
+		return 0, nil, status.Errorf(codes.Unavailable, err.Error())
 	}
-	return ioutil.NopCloser(bytes.NewBuffer(value))
+	return int64(len(value)), ioutil.NopCloser(bytes.NewBuffer(value)), nil
 }
 
 func (ba *redisBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {

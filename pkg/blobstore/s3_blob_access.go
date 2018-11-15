@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -45,15 +46,15 @@ func NewS3BlobAccess(s3 *s3.S3, uploader *s3manager.Uploader, bucketName *string
 	}
 }
 
-func (ba *s3BlobAccess) Get(ctx context.Context, digest *util.Digest) io.ReadCloser {
+func (ba *s3BlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	result, err := ba.s3.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: ba.bucketName,
 		Key:    ba.getKey(digest),
 	})
 	if err != nil {
-		return util.NewErrorReader(convertS3Error(err))
+		return 0, nil, convertS3Error(err)
 	}
-	return result.Body
+	return aws.Int64Value(result.ContentLength), result.Body, nil
 }
 
 func (ba *s3BlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {

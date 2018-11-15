@@ -2,10 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "digest.go",
-        "error_reader.go",
-    ],
+    srcs = ["digest.go"],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/util",
     visibility = ["//visibility:public"],
     deps = [

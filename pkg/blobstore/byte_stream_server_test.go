@@ -31,15 +31,15 @@ func TestExistenceByteStreamServer(t *testing.T) {
 	blobAccess.EXPECT().Get(gomock.Any(), util.MustNewDigest("", &remoteexecution.Digest{
 		Hash:      "09f7e02f1290be211da707a266f153b3",
 		SizeBytes: 5,
-	})).Return(ioutil.NopCloser(bytes.NewBufferString("Hello")))
+	})).Return(int64(5), ioutil.NopCloser(bytes.NewBufferString("Hello")), nil)
 	blobAccess.EXPECT().Get(gomock.Any(), util.MustNewDigest("debian8", &remoteexecution.Digest{
 		Hash:      "3538d378083b9afa5ffad767f7269509",
 		SizeBytes: 22,
-	})).Return(ioutil.NopCloser(bytes.NewBufferString("This is a long message")))
+	})).Return(int64(22), ioutil.NopCloser(bytes.NewBufferString("This is a long message")), nil)
 	blobAccess.EXPECT().Get(gomock.Any(), util.MustNewDigest("fedora28", &remoteexecution.Digest{
 		Hash:      "09f34d28e9c8bb445ec996388968a9e8",
 		SizeBytes: 7,
-	})).Return(util.NewErrorReader(status.Error(codes.NotFound, "Blob not found")))
+	})).Return(int64(0), nil, status.Error(codes.NotFound, "Blob not found"))
 
 	blobAccess.EXPECT().Put(gomock.Any(), util.MustNewDigest("", &remoteexecution.Digest{
 		Hash:      "94876e5b1ce62c7b2b5ff6e661624841",

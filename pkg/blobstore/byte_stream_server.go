@@ -94,7 +94,10 @@ func (s *byteStreamServer) Read(in *bytestream.ReadRequest, out bytestream.ByteS
 	if err != nil {
 		return err
 	}
-	r := s.blobAccess.Get(out.Context(), digest)
+	_, r, err := s.blobAccess.Get(out.Context(), digest)
+	if err != nil {
+		return err
+	}
 	defer r.Close()
 
 	for {

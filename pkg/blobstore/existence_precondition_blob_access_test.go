@@ -27,14 +27,16 @@ func TestExistencePreconditionBlobAccessGetSuccess(t *testing.T) {
 		ctx, util.MustNewDigest("debian8", &remoteexecution.Digest{
 			Hash:      "8b1a9953c4611296a827abf8c47804d7",
 			SizeBytes: 5,
-		})).Return(ioutil.NopCloser(bytes.NewBufferString("Hello")))
+		})).Return(int64(5), ioutil.NopCloser(bytes.NewBufferString("Hello")), nil)
 
 	// Validate that the reader can still be read properly.
-	r := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	length, r, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("debian8", &remoteexecution.Digest{
 			Hash:      "8b1a9953c4611296a827abf8c47804d7",
 			SizeBytes: 5,
 		}))
+	require.NoError(t, err)
+	require.Equal(t, int64(5), length)
 	buf, err := ioutil.ReadAll(r)
 	require.NoError(t, err)
 	require.Equal(t, []byte("Hello"), buf)
@@ -45,46 +47,43 @@ func TestExistencePreconditionBlobAccessGetResourceExhausted(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
 
-	// Let Get() return a reader that returns ResourceExhausted.
+	// Let Get() return ResourceExhausted.
 	bottomBlobAccess := mock.NewMockBlobAccess(ctrl)
 	bottomBlobAccess.EXPECT().Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c916e71d733d06cb77a4775de5f77fd0b480a7e8",
 			SizeBytes: 8,
-		})).Return(util.NewErrorReader(status.Error(codes.ResourceExhausted, "Out of luck!")))
+		})).Return(int64(0), nil, status.Error(codes.ResourceExhausted, "Out of luck!"))
 
 	// The error should be passed through unmodified.
-	r := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	_, _, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c916e71d733d06cb77a4775de5f77fd0b480a7e8",
 			SizeBytes: 8,
 		}))
-	_, err := ioutil.ReadAll(r)
 	s := status.Convert(err)
 	require.Equal(t, codes.ResourceExhausted, s.Code())
 	require.Equal(t, "Out of luck!", s.Message())
-	require.NoError(t, r.Close())
 }
 
 func TestExistencePreconditionBlobAccessGetNotFound(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
 
-	// Let Get() return a reader that returns NotFound.
+	// Let Get() return NotFound.
 	bottomBlobAccess := mock.NewMockBlobAccess(ctrl)
 	bottomBlobAccess.EXPECT().Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c015ad6ddaf8bb50689d2d7cbf1539dff6dd84473582a08ed1d15d841f4254f4",
 			SizeBytes: 7,
-		})).Return(util.NewErrorReader(status.Error(codes.NotFound, "Blob doesn't exist!")))
+		})).Return(int64(0), nil, status.Error(codes.NotFound, "Blob doesn't exist!"))
 
 	// The error should be translated to FailedPrecondition.
-	r := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	_, _, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c015ad6ddaf8bb50689d2d7cbf1539dff6dd84473582a08ed1d15d841f4254f4",
 			SizeBytes: 7,
 		}))
-	_, err := ioutil.ReadAll(r)
 	s := status.Convert(err)
 	require.Equal(t, codes.FailedPrecondition, s.Code())
 	require.Equal(t, "Blob doesn't exist!", s.Message())
@@ -100,15 +99,13 @@ func TestExistencePreconditionBlobAccessGetNotFound(t *testing.T) {
 			},
 		},
 	})
-
-	require.NoError(t, r.Close())
 }
 
 func TestExistencePreconditionBlobAccessPutNotFound(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
 
-	// Let Put() return a reader that returns NotFound.
+	// Let Put() return NotFound.
 	bottomBlobAccess := mock.NewMockBlobAccess(ctrl)
 	bottomBlobAccess.EXPECT().Put(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{

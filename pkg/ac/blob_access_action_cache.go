@@ -24,7 +24,10 @@ func NewBlobAccessActionCache(blobAccess blobstore.BlobAccess) ActionCache {
 }
 
 func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *util.Digest) (*remoteexecution.ActionResult, error) {
-	r := ac.blobAccess.Get(ctx, digest)
+	_, r, err := ac.blobAccess.Get(ctx, digest)
+	if err != nil {
+		return nil, err
+	}
 	data, err := ioutil.ReadAll(r)
 	r.Close()
 	if err != nil {

@@ -95,10 +95,6 @@ func readBulkString(r *bufio.Reader) (string, error) {
 //
 // Unlike a plain Redis server, keys have to match the format
 // "hash|size" or "hash|size|instance".
-//
-// TODO(edsch): The GET operation currently assumes the object size is
-// equal to the size in the digest, restricting the use of this server
-// to the Content Addressable Storage.
 type RedisServer struct {
 	blobAccess BlobAccess
 }
@@ -156,18 +152,15 @@ func (rs *RedisServer) handleCommands(ctx context.Context, conn io.ReadWriter) e
 				return fmt.Errorf("Failed to convert key to digest: %s", err)
 			}
 
-			// Read the first chunk of data to determine whether a
-			// success or error response needs to be returned.
-			var b [4096]byte
-			r := rs.blobAccess.Get(ctx, digest)
-			if n, err := r.Read(b[:]); err == nil || err == io.EOF {
-				if _, err := conn.Write([]byte(fmt.Sprintf("$%d\r\n", digest.GetSizeBytes()))); err != nil {
+			if length, r, err := rs.blobAccess.Get(ctx, digest); err == nil {
+				// Key exists. Stream blob to client.
+				if _, err := conn.Write([]byte(fmt.Sprintf("$%d\r\n", length))); err != nil {
+					r.Close()
 					return fmt.Errorf("Failed to write response size to client: %s", err)
 				}
-				if _, err := conn.Write(b[:n]); err != nil {
-					return fmt.Errorf("Failed to write response data to client: %s", err)
-				}
-				if _, err := io.Copy(conn, r); err != nil {
+				_, err = io.Copy(conn, r)
+				r.Close()
+				if err != nil {
 					return fmt.Errorf("Failed to write response data to client: %s", err)
 				}
 				if _, err := conn.Write([]byte("\r\n")); err != nil {
@@ -178,7 +171,7 @@ func (rs *RedisServer) handleCommands(ctx context.Context, conn io.ReadWriter) e
 				if _, err := conn.Write([]byte("$-1\r\n")); err != nil {
 					return fmt.Errorf("Failed to write response to client: %s", err)
 				}
-			} else {
+			} else if err != nil {
 				return fmt.Errorf("Failed to get blob: %s", err)
 			}
 		} else if commandUpper == "SET" && parameters == 3 {
