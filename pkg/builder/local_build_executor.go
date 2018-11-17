@@ -22,8 +22,6 @@ import (
 const (
 	pathTempRoot  = "/tmp"
 	pathBuildRoot = "/build"
-	pathStdout    = "/stdout"
-	pathStderr    = "/stderr"
 )
 
 var (
@@ -52,13 +50,19 @@ func joinPathSafe(elem ...string) (string, error) {
 
 type localBuildExecutor struct {
 	contentAddressableStorage cas.ContentAddressableStorage
+
+	// Paths where this executor may store temporary files.
+	pathStdout string
+	pathStderr string
 }
 
 // NewLocalBuildExecutor returns a BuildExecutor that executes build
 // steps on the local system.
-func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage) BuildExecutor {
+func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage, pathStdout string, pathStderr string) BuildExecutor {
 	return &localBuildExecutor{
 		contentAddressableStorage: contentAddressableStorage,
+		pathStdout:                pathStdout,
+		pathStderr:                pathStderr,
 	}
 }
 
@@ -154,13 +158,13 @@ func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexe
 	}
 
 	// Output streams.
-	stdout, err := os.OpenFile(pathStdout, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+	stdout, err := os.OpenFile(be.pathStdout, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		return err
 	}
 	defer stdout.Close()
 	cmd.Stdout = stdout
-	stderr, err := os.OpenFile(pathStderr, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+	stderr, err := os.OpenFile(be.pathStderr, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
 		return err
 	}
@@ -313,14 +317,14 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	// Upload command output. In the common case, the files are
 	// empty. If that's the case, don't bother setting the digest to
 	// keep the ActionResult small.
-	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, pathStdout, inputRootDigest)
+	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.pathStdout, inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
 	if stdoutDigest.GetSizeBytes() > 0 {
 		response.Result.StdoutDigest = stdoutDigest.GetRawDigest()
 	}
-	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, pathStderr, inputRootDigest)
+	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.pathStderr, inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}

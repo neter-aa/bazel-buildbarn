@@ -67,7 +67,7 @@ func main() {
 		util.DigestKeyWithoutInstance, 1000)
 	buildExecutor := builder.NewServerLogInjectingBuildExecutor(
 		builder.NewCachingBuildExecutor(
-			builder.NewLocalBuildExecutor(contentAddressableStorage),
+			builder.NewLocalBuildExecutor(contentAddressableStorage, "/stdout", "/stderr"),
 			ac.NewBlobAccessActionCache(
 				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
 		contentAddressableStorage,
