@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/blobstore:go_default_library",
         "//pkg/blobstore/circular:go_default_library",
+        "//pkg/filesystem:go_default_library",
         "//pkg/proto/blobstore:go_default_library",
         "//pkg/util:go_default_library",
         "@com_github_aws_aws_sdk_go//aws:go_default_library",

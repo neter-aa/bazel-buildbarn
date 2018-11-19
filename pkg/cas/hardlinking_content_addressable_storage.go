@@ -3,9 +3,8 @@ package cas
 import (
 	"context"
 	"math/rand"
-	"os"
-	"path"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 )
 
@@ -13,7 +12,7 @@ type hardlinkingContentAddressableStorage struct {
 	ContentAddressableStorage
 
 	digestKeyFormat util.DigestKeyFormat
-	path            string
+	cacheDirectory  filesystem.Directory
 	maxFiles        int
 	maxSize         int64
 
@@ -26,12 +25,12 @@ type hardlinkingContentAddressableStorage struct {
 // ContentAddressableStorage that stores files in an internal directory.
 // Only after successfully downloading files, they are hardlinked to the
 // target location. This reduces the amount of network traffic needed.
-func NewHardlinkingContentAddressableStorage(base ContentAddressableStorage, digestKeyFormat util.DigestKeyFormat, path string, maxFiles int, maxSize int64) ContentAddressableStorage {
+func NewHardlinkingContentAddressableStorage(base ContentAddressableStorage, digestKeyFormat util.DigestKeyFormat, cacheDirectory filesystem.Directory, maxFiles int, maxSize int64) ContentAddressableStorage {
 	return &hardlinkingContentAddressableStorage{
 		ContentAddressableStorage: base,
 
 		digestKeyFormat: digestKeyFormat,
-		path:            path,
+		cacheDirectory:  cacheDirectory,
 		maxFiles:        maxFiles,
 		maxSize:         maxSize,
 
@@ -44,7 +43,7 @@ func (cas *hardlinkingContentAddressableStorage) makeSpace(size int64) error {
 		// Remove random file from disk.
 		idx := rand.Intn(len(cas.filesPresentList))
 		key := cas.filesPresentList[idx]
-		if err := os.Remove(path.Join(cas.path, key)); err != nil {
+		if err := cas.cacheDirectory.Remove(key); err != nil {
 			return err
 		}
 
@@ -58,7 +57,7 @@ func (cas *hardlinkingContentAddressableStorage) makeSpace(size int64) error {
 	return nil
 }
 
-func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, digest *util.Digest, outputPath string, isExecutable bool) error {
+func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, digest *util.Digest, directory filesystem.Directory, name string, isExecutable bool) error {
 	key := digest.GetKey(cas.digestKeyFormat)
 	if isExecutable {
 		key += "+x"
@@ -66,18 +65,17 @@ func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, di
 		key += "-x"
 	}
 
-	cachePath := path.Join(cas.path, key)
 	if _, ok := cas.filesPresentSize[key]; !ok {
 		sizeBytes := digest.GetSizeBytes()
 		if err := cas.makeSpace(sizeBytes); err != nil {
 			return err
 		}
-		if err := cas.ContentAddressableStorage.GetFile(ctx, digest, cachePath, isExecutable); err != nil {
+		if err := cas.ContentAddressableStorage.GetFile(ctx, digest, cas.cacheDirectory, key, isExecutable); err != nil {
 			return err
 		}
 		cas.filesPresentList = append(cas.filesPresentList, key)
 		cas.filesPresentSize[key] = sizeBytes
 		cas.filesPresentTotalSize += sizeBytes
 	}
-	return os.Link(cachePath, outputPath)
+	return cas.cacheDirectory.Link(key, directory, name)
 }

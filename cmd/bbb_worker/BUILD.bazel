@@ -12,6 +12,8 @@ go_library(
         "//pkg/blobstore/configuration:go_default_library",
         "//pkg/builder:go_default_library",
         "//pkg/cas:go_default_library",
+        "//pkg/environment:go_default_library",
+        "//pkg/filesystem:go_default_library",
         "//pkg/proto/scheduler:go_default_library",
         "//pkg/util:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",

@@ -2,26 +2,20 @@ package builder
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path"
-	"syscall"
+	"strings"
 	"time"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
-)
-
-const (
-	pathTempRoot  = "/tmp"
-	pathBuildRoot = "/build"
 )
 
 var (
@@ -40,37 +34,23 @@ func init() {
 	prometheus.MustRegister(localBuildExecutorDurationSeconds)
 }
 
-func joinPathSafe(elem ...string) (string, error) {
-	joined := path.Join(elem...)
-	if joined != path.Clean(joined) {
-		return "", fmt.Errorf("Attempted to access non-clean path %s", joined)
-	}
-	return joined, nil
-}
-
 type localBuildExecutor struct {
 	contentAddressableStorage cas.ContentAddressableStorage
-
-	// Paths where this executor may store temporary files.
-	pathStdout string
-	pathStderr string
+	environmentManager        environment.Manager
+	logsDirectory             filesystem.Directory
 }
 
 // NewLocalBuildExecutor returns a BuildExecutor that executes build
 // steps on the local system.
-func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage, pathStdout string, pathStderr string) BuildExecutor {
+func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage, environmentManager environment.Manager, logsDirectory filesystem.Directory) BuildExecutor {
 	return &localBuildExecutor{
 		contentAddressableStorage: contentAddressableStorage,
-		pathStdout:                pathStdout,
-		pathStderr:                pathStderr,
+		environmentManager:        environmentManager,
+		logsDirectory:             logsDirectory,
 	}
 }
 
-func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *util.Digest, base string) error {
-	if err := os.Mkdir(base, 0777); err != nil {
-		return err
-	}
-
+func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *util.Digest, inputDirectory filesystem.Directory) error {
 	directory, err := be.contentAddressableStorage.GetDirectory(ctx, digest)
 	if err != nil {
 		return err
@@ -81,11 +61,7 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *
 		if err != nil {
 			return err
 		}
-		childPath, err := joinPathSafe(base, file.Name)
-		if err != nil {
-			return err
-		}
-		if err := be.contentAddressableStorage.GetFile(ctx, childDigest, childPath, file.IsExecutable); err != nil {
+		if err := be.contentAddressableStorage.GetFile(ctx, childDigest, inputDirectory, file.Name, file.IsExecutable); err != nil {
 			return err
 		}
 	}
@@ -94,108 +70,60 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *
 		if err != nil {
 			return err
 		}
-		childPath, err := joinPathSafe(base, directory.Name)
+		if err := inputDirectory.Mkdir(directory.Name, 0777); err != nil {
+			return err
+		}
+		childDirectory, err := inputDirectory.Enter(directory.Name)
 		if err != nil {
 			return err
 		}
-		if err := be.createInputDirectory(ctx, childDigest, childPath); err != nil {
+		err = be.createInputDirectory(ctx, childDigest, childDirectory)
+		childDirectory.Close()
+		if err != nil {
 			return err
 		}
 	}
-	// TODO(edsch): Create symlinks in the input root in a secure way.
-	if len(directory.Symlinks) > 0 {
-		return errors.New("Creating symlinks in the input root is not yet supported")
+	for _, symlink := range directory.Symlinks {
+		if err := inputDirectory.Symlink(symlink.Target, symlink.Name); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (be *localBuildExecutor) prepareFilesystem(ctx context.Context, request *remoteexecution.ExecuteRequest, inputRootDigest *util.Digest, command *remoteexecution.Command) error {
-	// Copy input files into build environment.
-	os.RemoveAll(pathBuildRoot)
-	if err := be.createInputDirectory(ctx, inputRootDigest, pathBuildRoot); err != nil {
-		return err
-	}
-
-	// Ensure that directories where output files are stored are present.
-	for _, outputDirectory := range command.OutputDirectories {
-		outputPath, err := joinPathSafe(pathBuildRoot, outputDirectory)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(path.Dir(outputPath), 0777); err != nil {
-			return err
-		}
-	}
-	for _, outputFile := range command.OutputFiles {
-		outputPath, err := joinPathSafe(pathBuildRoot, outputFile)
-		if err != nil {
-			return err
-		}
-		if err := os.MkdirAll(path.Dir(outputPath), 0777); err != nil {
-			return err
-		}
-	}
-
-	// Provide a clean temp directory.
-	os.RemoveAll(pathTempRoot)
-	return os.Mkdir(pathTempRoot, 0777)
-}
-
-func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexecution.Command) error {
-	// Prepare the command to run.
-	if len(command.Arguments) < 1 {
-		return errors.New("Insufficent number of command arguments")
-	}
-	cmd := exec.CommandContext(ctx, command.Arguments[0], command.Arguments[1:]...)
-	workingDirectory, err := joinPathSafe(pathBuildRoot, command.WorkingDirectory)
-	if err != nil {
-		return err
-	}
-	cmd.Dir = workingDirectory
-	cmd.Env = []string{"HOME=" + pathTempRoot}
+func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexecution.Command, environment environment.Environment) (int, error) {
+	environmentVariables := map[string]string{}
 	for _, environmentVariable := range command.EnvironmentVariables {
-		cmd.Env = append(cmd.Env, environmentVariable.Name+"="+environmentVariable.Value)
+		environmentVariables[environmentVariable.Name] = environmentVariable.Value
 	}
 
-	// Output streams.
-	stdout, err := os.OpenFile(be.pathStdout, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+	stdout, err := be.logsDirectory.OpenFile("stdout", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer stdout.Close()
-	cmd.Stdout = stdout
-	stderr, err := os.OpenFile(be.pathStderr, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+
+	stderr, err := be.logsDirectory.OpenFile("stderr", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer stderr.Close()
-	cmd.Stderr = stderr
 
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: 1,
-			Gid: 1,
-		},
-	}
-	return cmd.Run()
+	return environment.Run(ctx, command.Arguments, environmentVariables, command.WorkingDirectory, stdout, stderr)
 }
 
-func (be *localBuildExecutor) uploadDirectory(ctx context.Context, basePath string, parentDigest *util.Digest, permitNonExistent bool, children map[string]*remoteexecution.Directory) (*remoteexecution.Directory, error) {
-	files, err := ioutil.ReadDir(basePath)
+func (be *localBuildExecutor) uploadDirectory(ctx context.Context, outputDirectory filesystem.Directory, parentDigest *util.Digest, children map[string]*remoteexecution.Directory) (*remoteexecution.Directory, error) {
+	files, err := outputDirectory.ReadDir()
 	if err != nil {
-		if permitNonExistent && os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
 
 	var directory remoteexecution.Directory
 	for _, file := range files {
 		name := file.Name()
-		fullPath := path.Join(basePath, name)
 		switch file.Mode() & os.ModeType {
 		case 0:
-			digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, fullPath, parentDigest)
+			digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, outputDirectory, name, parentDigest)
 			if err != nil {
 				return nil, err
 			}
@@ -205,7 +133,12 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, basePath stri
 				IsExecutable: isExecutable,
 			})
 		case os.ModeDir:
-			child, err := be.uploadDirectory(ctx, fullPath, parentDigest, false, children)
+			childDirectory, err := outputDirectory.Enter(name)
+			if err != nil {
+				return nil, err
+			}
+			child, err := be.uploadDirectory(ctx, childDirectory, parentDigest, children)
+			childDirectory.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -227,7 +160,7 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, basePath stri
 				Digest: digest.GetRawDigest(),
 			})
 		case os.ModeSymlink:
-			target, err := os.Readlink(fullPath)
+			target, err := outputDirectory.Readlink(name)
 			if err != nil {
 				return nil, err
 			}
@@ -236,17 +169,17 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, basePath stri
 				Target: target,
 			})
 		default:
-			return nil, fmt.Errorf("Path %s has an unsupported file type", basePath)
+			return nil, fmt.Errorf("File %s has an unsupported file type", name)
 		}
 	}
 	return &directory, nil
 }
 
-func (be *localBuildExecutor) uploadTree(ctx context.Context, path string, parentDigest *util.Digest) (*util.Digest, error) {
+func (be *localBuildExecutor) uploadTree(ctx context.Context, outputDirectory filesystem.Directory, parentDigest *util.Digest) (*util.Digest, error) {
 	// Gather all individual directory objects and turn them into a tree.
 	children := map[string]*remoteexecution.Directory{}
-	root, err := be.uploadDirectory(ctx, path, parentDigest, true, children)
-	if root == nil || err != nil {
+	root, err := be.uploadDirectory(ctx, outputDirectory, parentDigest, children)
+	if err != nil {
 		return nil, err
 	}
 	tree := &remoteexecution.Tree{
@@ -256,6 +189,34 @@ func (be *localBuildExecutor) uploadTree(ctx context.Context, path string, paren
 		tree.Children = append(tree.Children, child)
 	}
 	return be.contentAddressableStorage.PutTree(ctx, tree, parentDigest)
+}
+
+func (be *localBuildExecutor) createOutputParentDirectory(buildDirectory filesystem.Directory, path string) (filesystem.Directory, error) {
+	components := strings.FieldsFunc(path, func(r rune) bool { return r == '/' })
+
+	// Create and enter first component.
+	if err := buildDirectory.Mkdir(components[0], 0777); err != nil && !os.IsExist(err) {
+		return nil, err
+	}
+	d, err := buildDirectory.Enter(components[0])
+	if err != nil {
+		return nil, err
+	}
+
+	// Create and enter successive components, closing the former.
+	for _, component := range components[1:] {
+		if err := d.Mkdir(component, 0777); err != nil && !os.IsExist(err) {
+			d.Close()
+			return nil, err
+		}
+		d2, err := d.Enter(component)
+		d.Close()
+		if err != nil {
+			return nil, err
+		}
+		d = d2
+	}
+	return d, nil
 }
 
 func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecution.ExecuteRequest) (*remoteexecution.ExecuteResponse, bool) {
@@ -282,27 +243,57 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	localBuildExecutorDurationSeconds.WithLabelValues("get_action_command").Observe(
 		timeAfterGetActionCommand.Sub(timeStart).Seconds())
 
+	environment, err := be.environmentManager.Acquire(command.Platform)
+	if err != nil {
+		return convertErrorToExecuteResponse(err), false
+	}
+	defer environment.Release()
+
 	// Set up inputs.
 	inputRootDigest, err := actionDigest.NewDerivedDigest(action.InputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
-	if err := be.prepareFilesystem(ctx, request, inputRootDigest, command); err != nil {
+	buildDirectory := environment.GetBuildDirectory()
+	if err := be.createInputDirectory(ctx, inputRootDigest, buildDirectory); err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
+
+	// Create and open parent directories of where we expect to see output.
+	// Build rules generally expect the parent directories to already be
+	// there. We later use the directory handles to extract output files.
+	outputParentDirectories := map[string]filesystem.Directory{}
+	for _, outputDirectory := range command.OutputDirectories {
+		dirPath := path.Dir(outputDirectory)
+		if _, ok := outputParentDirectories[dirPath]; !ok {
+			dir, err := be.createOutputParentDirectory(buildDirectory, dirPath)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			outputParentDirectories[dirPath] = dir
+			defer dir.Close()
+		}
+	}
+	for _, outputFile := range command.OutputFiles {
+		dirPath := path.Dir(outputFile)
+		if _, ok := outputParentDirectories[dirPath]; !ok {
+			dir, err := be.createOutputParentDirectory(buildDirectory, dirPath)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			outputParentDirectories[dirPath] = dir
+			defer dir.Close()
+		}
+	}
+
 	timeAfterPrepareFilesytem := time.Now()
 	localBuildExecutorDurationSeconds.WithLabelValues("prepare_filesystem").Observe(
 		timeAfterPrepareFilesytem.Sub(timeAfterGetActionCommand).Seconds())
 
 	// Invoke command.
-	exitCode := 0
-	if err := be.runCommand(ctx, command); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			waitStatus := exitError.Sys().(syscall.WaitStatus)
-			exitCode = waitStatus.ExitStatus()
-		} else {
-			return convertErrorToExecuteResponse(err), false
-		}
+	exitCode, err := be.runCommand(ctx, command, environment)
+	if err != nil {
+		return convertErrorToExecuteResponse(err), false
 	}
 	timeAfterRunCommand := time.Now()
 	localBuildExecutorDurationSeconds.WithLabelValues("run_command").Observe(
@@ -317,14 +308,14 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	// Upload command output. In the common case, the files are
 	// empty. If that's the case, don't bother setting the digest to
 	// keep the ActionResult small.
-	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.pathStdout, inputRootDigest)
+	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stdout", inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
 	if stdoutDigest.GetSizeBytes() > 0 {
 		response.Result.StdoutDigest = stdoutDigest.GetRawDigest()
 	}
-	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.pathStderr, inputRootDigest)
+	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stderr", inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
@@ -334,12 +325,9 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 
 	// Upload output files.
 	for _, outputFile := range command.OutputFiles {
-		outputPath, err := joinPathSafe(pathBuildRoot, outputFile)
+		digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, outputParentDirectories[path.Dir(outputFile)], path.Base(outputFile), inputRootDigest)
 		if err != nil {
-			return convertErrorToExecuteResponse(err), false
-		}
-		digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, outputPath, inputRootDigest)
-		if err != nil {
+			// TODO(edsch): Output file symlinks.
 			if os.IsNotExist(err) {
 				continue
 			}
@@ -354,11 +342,16 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 
 	// Upload output directories.
 	for _, outputDirectory := range command.OutputDirectories {
-		outputPath, err := joinPathSafe(pathBuildRoot, outputDirectory)
+		directory, err := outputParentDirectories[path.Dir(outputDirectory)].Enter(path.Base(outputDirectory))
 		if err != nil {
+			// TODO(edsch): Output directory symlinks.
+			if os.IsNotExist(err) {
+				continue
+			}
 			return convertErrorToExecuteResponse(err), false
 		}
-		digest, err := be.uploadTree(ctx, outputPath, inputRootDigest)
+		digest, err := be.uploadTree(ctx, directory, inputRootDigest)
+		directory.Close()
 		if err != nil {
 			return convertErrorToExecuteResponse(err), false
 		}
@@ -369,8 +362,6 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 			})
 		}
 	}
-
-	// TODO(edsch): Output symlinks.
 
 	timeAfterUpload := time.Now()
 	localBuildExecutorDurationSeconds.WithLabelValues("upload_output").Observe(

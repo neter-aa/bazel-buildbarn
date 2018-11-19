@@ -17,6 +17,8 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -57,17 +59,33 @@ func main() {
 	if err := os.Mkdir("/cache", 0); err != nil {
 		log.Fatal("Failed to create cache directory: ", err)
 	}
+	cacheDirectory, err := filesystem.NewLocalDirectory("/cache")
+	if err != nil {
+		log.Fatal("Failed to open cache directory: ", err)
+	}
+
+	// Directory for placing temporary stdout/stderr log output.
+	if err := os.Mkdir("/logs", 0); err != nil {
+		log.Fatal("Failed to create logs directory: ", err)
+	}
+	logsDirectory, err := filesystem.NewLocalDirectory("/logs")
+	if err != nil {
+		log.Fatal("Failed to open logs directory: ", err)
+	}
 
 	contentAddressableStorage := cas.NewDirectoryCachingContentAddressableStorage(
 		cas.NewHardlinkingContentAddressableStorage(
 			cas.NewBlobAccessContentAddressableStorage(
 				blobstore.NewExistencePreconditionBlobAccess(
 					contentAddressableStorageBlobAccess)),
-			util.DigestKeyWithoutInstance, "/cache", 10000, 1<<30),
+			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
 	buildExecutor := builder.NewServerLogInjectingBuildExecutor(
 		builder.NewCachingBuildExecutor(
-			builder.NewLocalBuildExecutor(contentAddressableStorage, "/stdout", "/stderr"),
+			builder.NewLocalBuildExecutor(
+				contentAddressableStorage,
+				environment.NewSimpleManager(),
+				logsDirectory),
 			ac.NewBlobAccessActionCache(
 				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
 		contentAddressableStorage,

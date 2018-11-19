@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/failure"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -73,12 +74,12 @@ func (cas *blobAccessContentAddressableStorage) GetDirectory(ctx context.Context
 	return &directory, nil
 }
 
-func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, digest *util.Digest, outputPath string, isExecutable bool) error {
+func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, digest *util.Digest, directory filesystem.Directory, name string, isExecutable bool) error {
 	var mode os.FileMode = 0444
 	if isExecutable {
 		mode = 0555
 	}
-	w, err := os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+	w, err := directory.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (cas *blobAccessContentAddressableStorage) GetFile(ctx context.Context, dig
 
 	// Ensure no traces are left behind upon failure.
 	if err != nil {
-		os.Remove(outputPath)
+		directory.Remove(name)
 	}
 	return err
 }
@@ -132,8 +133,8 @@ func (cas *blobAccessContentAddressableStorage) PutActionFailure(ctx context.Con
 	return cas.putMessage(ctx, actionFailure, parentDigest)
 }
 
-func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, path string, parentDigest *util.Digest) (*util.Digest, bool, error) {
-	file, err := os.Open(path)
+func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, bool, error) {
+	file, err := directory.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, false, err
 	}
