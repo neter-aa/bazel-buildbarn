@@ -3,6 +3,7 @@ package cas
 import (
 	"context"
 	"math/rand"
+	"sync"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -10,6 +11,8 @@ import (
 
 type hardlinkingContentAddressableStorage struct {
 	ContentAddressableStorage
+
+	lock sync.Mutex
 
 	digestKeyFormat util.DigestKeyFormat
 	cacheDirectory  filesystem.Directory
@@ -22,9 +25,11 @@ type hardlinkingContentAddressableStorage struct {
 }
 
 // NewHardlinkingContentAddressableStorage is an adapter for
-// ContentAddressableStorage that stores files in an internal directory.
-// Only after successfully downloading files, they are hardlinked to the
-// target location. This reduces the amount of network traffic needed.
+// ContentAddressableStorage that stores files in an internal directory. After
+// successfully downloading files at the target location, they are hardlinked
+// into the cache. Future calls for the same file will hardlink them from the
+// cache to the target location. This reduces the amount of network traffic
+// needed.
 func NewHardlinkingContentAddressableStorage(base ContentAddressableStorage, digestKeyFormat util.DigestKeyFormat, cacheDirectory filesystem.Directory, maxFiles int, maxSize int64) ContentAddressableStorage {
 	return &hardlinkingContentAddressableStorage{
 		ContentAddressableStorage: base,
@@ -65,17 +70,34 @@ func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, di
 		key += "-x"
 	}
 
+	// If the file is present in the cache, hardlink it to the destination.
+	cas.lock.Lock()
+	if _, ok := cas.filesPresentSize[key]; ok {
+		err := cas.cacheDirectory.Link(key, directory, name)
+		cas.lock.Unlock()
+		return err
+	}
+	cas.lock.Unlock()
+
+	// Download the file at the intended location.
+	if err := cas.ContentAddressableStorage.GetFile(ctx, digest, directory, name, isExecutable); err != nil {
+		return err
+	}
+
+	// Hardlink the file into the cache.
+	cas.lock.Lock()
+	defer cas.lock.Unlock()
 	if _, ok := cas.filesPresentSize[key]; !ok {
 		sizeBytes := digest.GetSizeBytes()
 		if err := cas.makeSpace(sizeBytes); err != nil {
 			return err
 		}
-		if err := cas.ContentAddressableStorage.GetFile(ctx, digest, cas.cacheDirectory, key, isExecutable); err != nil {
+		if err := directory.Link(name, cas.cacheDirectory, key); err != nil {
 			return err
 		}
 		cas.filesPresentList = append(cas.filesPresentList, key)
 		cas.filesPresentSize[key] = sizeBytes
 		cas.filesPresentTotalSize += sizeBytes
 	}
-	return cas.cacheDirectory.Link(key, directory, name)
+	return nil
 }

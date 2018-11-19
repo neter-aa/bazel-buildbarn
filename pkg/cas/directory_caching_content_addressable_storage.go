@@ -3,6 +3,7 @@ package cas
 import (
 	"context"
 	"math/rand"
+	"sync"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -10,6 +11,8 @@ import (
 
 type directoryCachingContentAddressableStorage struct {
 	ContentAddressableStorage
+
+	lock sync.Mutex
 
 	digestKeyFormat util.DigestKeyFormat
 	maxDirectories  int
@@ -49,15 +52,28 @@ func (cas *directoryCachingContentAddressableStorage) makeSpace() {
 
 func (cas *directoryCachingContentAddressableStorage) GetDirectory(ctx context.Context, digest *util.Digest) (*remoteexecution.Directory, error) {
 	key := digest.GetKey(cas.digestKeyFormat)
-	if directory, ok := cas.directoriesPresentMessage[key]; ok {
+
+	// Check the cache.
+	cas.lock.Lock()
+	directory, ok := cas.directoriesPresentMessage[key]
+	cas.lock.Unlock()
+	if ok {
 		return directory, nil
 	}
+
+	// Not found. Download directory.
 	directory, err := cas.ContentAddressableStorage.GetDirectory(ctx, digest)
 	if err != nil {
 		return nil, err
 	}
-	cas.makeSpace()
-	cas.directoriesPresentList = append(cas.directoriesPresentList, key)
-	cas.directoriesPresentMessage[key] = directory
+
+	// Insert it into the cache.
+	cas.lock.Lock()
+	if _, ok := cas.directoriesPresentMessage[key]; !ok {
+		cas.makeSpace()
+		cas.directoriesPresentList = append(cas.directoriesPresentList, key)
+		cas.directoriesPresentMessage[key] = directory
+	}
+	cas.lock.Unlock()
 	return directory, nil
 }
