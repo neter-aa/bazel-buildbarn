@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/circular"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	pb "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/aws/aws-sdk-go/aws"
@@ -61,15 +61,20 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		backendType = "circular"
 
 		// Open input files.
-		offsetFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "offset"), os.O_RDWR|os.O_CREATE, 0644)
+		circularDirectory, err := filesystem.NewLocalDirectory(backend.Circular.Directory)
 		if err != nil {
 			return nil, err
 		}
-		dataFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "data"), os.O_RDWR|os.O_CREATE, 0644)
+		defer circularDirectory.Close()
+		offsetFile, err := circularDirectory.OpenFile("offset", os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return nil, err
 		}
-		stateFile, err := os.OpenFile(filepath.Join(backend.Circular.Directory, "state"), os.O_RDWR|os.O_CREATE, 0644)
+		dataFile, err := circularDirectory.OpenFile("data", os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+		stateFile, err := circularDirectory.OpenFile("state", os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return nil, err
 		}
