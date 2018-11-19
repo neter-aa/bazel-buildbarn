@@ -43,6 +43,7 @@ func (d *localDirectory) Enter(name string) (Directory, error) {
 		return nil, err
 	}
 	fd, err := unix.Openat(d.fd, name, unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_RDONLY, 0)
+	runtime.KeepAlive(d)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,6 @@ func (fi *fileInfo) Sys() interface{} {
 func (d *localDirectory) ReadDir() ([]os.FileInfo, error) {
 	// Obtain filenames in current directory.
 	fd, err := unix.Openat(d.fd, ".", unix.O_DIRECTORY|unix.O_RDONLY, 0)
-	runtime.KeepAlive(d)
 	if err != nil {
 		return nil, err
 	}
