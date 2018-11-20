@@ -50,38 +50,46 @@ func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStora
 	}
 }
 
-func (be *localBuildExecutor) createInputDirectory(ctx context.Context, digest *util.Digest, inputDirectory filesystem.Directory) error {
-	directory, err := be.contentAddressableStorage.GetDirectory(ctx, digest)
-	if err != nil {
-		return err
+func (be *localBuildExecutor) createInputDirectory(workpool *util.Workpool, directory *remoteexecution.Directory, digest *util.Digest, inputDirectory filesystem.Directory) error {
+	for _, fileIterator := range directory.Files {
+		file := fileIterator
+		workpool.Enqueue(
+			func(ctx context.Context) error {
+				childDigest, err := digest.NewDerivedDigest(file.Digest)
+				if err != nil {
+					return err
+				}
+				if err := be.contentAddressableStorage.GetFile(ctx, childDigest, inputDirectory, file.Name, file.IsExecutable); err != nil {
+					return err
+				}
+				return nil
+			})
 	}
-
-	for _, file := range directory.Files {
-		childDigest, err := digest.NewDerivedDigest(file.Digest)
-		if err != nil {
-			return err
-		}
-		if err := be.contentAddressableStorage.GetFile(ctx, childDigest, inputDirectory, file.Name, file.IsExecutable); err != nil {
-			return err
-		}
-	}
-	for _, directory := range directory.Directories {
-		childDigest, err := digest.NewDerivedDigest(directory.Digest)
-		if err != nil {
-			return err
-		}
-		if err := inputDirectory.Mkdir(directory.Name, 0777); err != nil {
-			return err
-		}
-		childDirectory, err := inputDirectory.Enter(directory.Name)
-		if err != nil {
-			return err
-		}
-		err = be.createInputDirectory(ctx, childDigest, childDirectory)
-		childDirectory.Close()
-		if err != nil {
-			return err
-		}
+	for _, directoryIterator := range directory.Directories {
+		directory := directoryIterator
+		workpool.Enqueue(
+			func(ctx context.Context) error {
+				childDigest, err := digest.NewDerivedDigest(directory.Digest)
+				if err != nil {
+					return err
+				}
+				childDirectory, err := be.contentAddressableStorage.GetDirectory(ctx, childDigest)
+				if err != nil {
+					return err
+				}
+				if err := inputDirectory.Mkdir(directory.Name, 0777); err != nil {
+					return err
+				}
+				childInputDirectory, err := inputDirectory.Enter(directory.Name)
+				if err != nil {
+					return err
+				}
+				err = be.createInputDirectory(workpool, childDirectory, childDigest, childInputDirectory)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
 	}
 	for _, symlink := range directory.Symlinks {
 		if err := inputDirectory.Symlink(symlink.Target, symlink.Name); err != nil {
@@ -255,7 +263,18 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		return convertErrorToExecuteResponse(err), false
 	}
 	buildDirectory := environment.GetBuildDirectory()
-	if err := be.createInputDirectory(ctx, inputRootDigest, buildDirectory); err != nil {
+
+	// TODO(edsch): Set this to a proper value?
+	workpool := util.NewWorkpool(ctx, 16)
+	workpool.Enqueue(
+		func(ctx context.Context) error {
+			directory, err := be.contentAddressableStorage.GetDirectory(ctx, inputRootDigest)
+			if err != nil {
+				return err
+			}
+			return be.createInputDirectory(workpool, directory, inputRootDigest, buildDirectory)
+		})
+	if err := workpool.WaitForCompletion(); err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
 
