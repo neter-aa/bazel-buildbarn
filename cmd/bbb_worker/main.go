@@ -73,23 +73,26 @@ func main() {
 		log.Fatal("Failed to open logs directory: ", err)
 	}
 
+	contentAddressableStorageBlobAccess, contentAddressableStorageFlusher := blobstore.NewBatchedStoreBlobAccess(
+		blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
+		util.DigestKeyWithoutInstance, 100)
 	contentAddressableStorage := cas.NewDirectoryCachingContentAddressableStorage(
 		cas.NewHardlinkingContentAddressableStorage(
-			cas.NewBlobAccessContentAddressableStorage(
-				blobstore.NewExistencePreconditionBlobAccess(
-					contentAddressableStorageBlobAccess)),
+			cas.NewBlobAccessContentAddressableStorage(contentAddressableStorageBlobAccess),
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
-	buildExecutor := builder.NewServerLogInjectingBuildExecutor(
-		builder.NewCachingBuildExecutor(
-			builder.NewLocalBuildExecutor(
-				contentAddressableStorage,
-				environment.NewSimpleManager(),
-				logsDirectory),
-			ac.NewBlobAccessActionCache(
-				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
-		contentAddressableStorage,
-		browserURL)
+	buildExecutor := builder.NewStorageFlushingBuildExecutor(
+		builder.NewServerLogInjectingBuildExecutor(
+			builder.NewCachingBuildExecutor(
+				builder.NewLocalBuildExecutor(
+					contentAddressableStorage,
+					environment.NewSimpleManager(),
+					logsDirectory),
+				ac.NewBlobAccessActionCache(
+					blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
+			contentAddressableStorage,
+			browserURL),
+		contentAddressableStorageFlusher)
 
 	// Create connection with scheduler.
 	schedulerConnection, err := grpc.Dial(

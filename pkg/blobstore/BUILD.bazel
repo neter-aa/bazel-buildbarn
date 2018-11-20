@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "batched_store_blob_access.go",
         "blob_access.go",
         "byte_stream_server.go",
         "existence_precondition_blob_access.go",
