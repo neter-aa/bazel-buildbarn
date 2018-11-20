@@ -7,7 +7,23 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	hardlinkingContentAddressableStorageOperationsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "buildbarn",
+			Subsystem: "cas",
+			Name:      "hardlinking_content_addressable_storage_operations_total",
+			Help:      "Total number of operations against the hardlinking content addressable storage.",
+		},
+		[]string{"result"})
+)
+
+func init() {
+	prometheus.MustRegister(hardlinkingContentAddressableStorageOperationsTotal)
+}
 
 type hardlinkingContentAddressableStorage struct {
 	ContentAddressableStorage
@@ -75,9 +91,11 @@ func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, di
 	if _, ok := cas.filesPresentSize[key]; ok {
 		err := cas.cacheDirectory.Link(key, directory, name)
 		cas.lock.Unlock()
+		hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Hit").Inc()
 		return err
 	}
 	cas.lock.Unlock()
+	hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Miss").Inc()
 
 	// Download the file at the intended location.
 	if err := cas.ContentAddressableStorage.GetFile(ctx, digest, directory, name, isExecutable); err != nil {
