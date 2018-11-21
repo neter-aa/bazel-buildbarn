@@ -5,6 +5,7 @@ proto_library(
     name = "blobstore_proto",
     srcs = ["blobstore.proto"],
     visibility = ["//visibility:public"],
+    deps = ["@go_googleapis//google/rpc:status_proto"],
 )
 
 go_proto_library(
@@ -12,6 +13,7 @@ go_proto_library(
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore",
     proto = ":blobstore_proto",
     visibility = ["//visibility:public"],
+    deps = ["@go_googleapis//google/rpc:status_go_proto"],
 )
 
 go_library(

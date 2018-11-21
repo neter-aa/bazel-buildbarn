@@ -7,6 +7,7 @@ go_library(
     importpath = "github.com/EdSchouten/bazel-buildbarn/cmd/bbb_storage",
     visibility = ["//visibility:private"],
     deps = [
+        "//pkg/ac:go_default_library",
         "//pkg/blobstore:go_default_library",
         "//pkg/blobstore/configuration:go_default_library",
         "//pkg/cas:go_default_library",

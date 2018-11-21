@@ -21,12 +21,13 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 // CreateBlobAccessObjectsFromConfig creates a pair of BlobAccess
 // objects for the Content Addressable Storage and Action cache based on
 // a configuration file.
-func CreateBlobAccessObjectsFromConfig(configurationFile string, needsActionCache bool) (blobstore.BlobAccess, blobstore.BlobAccess, error) {
+func CreateBlobAccessObjectsFromConfig(configurationFile string) (blobstore.BlobAccess, blobstore.BlobAccess, error) {
 	data, err := ioutil.ReadFile(configurationFile)
 	if err != nil {
 		return nil, nil, err
@@ -41,12 +42,9 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string, needsActionCach
 	if err != nil {
 		return nil, nil, err
 	}
-	var actionCache blobstore.BlobAccess
-	if needsActionCache {
-		actionCache, err = createBlobAccess(config.ActionCache, "ac", util.DigestKeyWithInstance)
-		if err != nil {
-			return nil, nil, err
-		}
+	actionCache, err := createBlobAccess(config.ActionCache, "ac", util.DigestKeyWithInstance)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Stack a mandatory layer on top to protect against data corruption.
@@ -59,6 +57,9 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string, needsActionCach
 func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, digestKeyFormat util.DigestKeyFormat) (blobstore.BlobAccess, error) {
 	var implementation blobstore.BlobAccess
 	var backendType string
+	if config == nil {
+		return nil, errors.New("Configuration not specified")
+	}
 	switch backend := config.Backend.(type) {
 	case *pb.BlobAccessConfiguration_Circular:
 		backendType = "circular"
@@ -92,6 +93,9 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		if err != nil {
 			return nil, err
 		}
+	case *pb.BlobAccessConfiguration_Error:
+		backendType = "failing"
+		implementation = blobstore.NewErrorBlobAccess(status.ErrorProto(backend.Error))
 	case *pb.BlobAccessConfiguration_Grpc:
 		backendType = "grpc"
 		switch storageType {

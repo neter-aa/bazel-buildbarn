@@ -7,6 +7,7 @@ go_library(
         "blob_access.go",
         "byte_stream_server.go",
         "content_addressable_storage_blob_access.go",
+        "error_blob_access.go",
         "existence_precondition_blob_access.go",
         "merkle_blob_access.go",
         "metrics_blob_access.go",

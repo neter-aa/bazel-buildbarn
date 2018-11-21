@@ -7,6 +7,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
@@ -31,16 +32,18 @@ func main() {
 	}()
 
 	// Storage access.
-	contentAddressableStorageBlobAccess, _, err := configuration.CreateBlobAccessObjectsFromConfig(*blobstoreConfig, false)
+	contentAddressableStorageBlobAccess, actionCacheBlobAccess, err := configuration.CreateBlobAccessObjectsFromConfig(*blobstoreConfig)
 	if err != nil {
 		log.Fatal("Failed to create blob access: ", err)
 	}
+	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
 
 	// RPC server.
 	s := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
+	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache, true))
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
 	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess, 1<<16))
 	grpc_prometheus.EnableHandlingTimeHistogram()

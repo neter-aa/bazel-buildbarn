@@ -24,7 +24,7 @@ func main() {
 	flag.Parse()
 
 	// Storage access.
-	contentAddressableStorageBlobAccess, actionCacheBlobAccess, err := configuration.CreateBlobAccessObjectsFromConfig(*blobstoreConfig, true)
+	contentAddressableStorageBlobAccess, actionCacheBlobAccess, err := configuration.CreateBlobAccessObjectsFromConfig(*blobstoreConfig)
 	if err != nil {
 		log.Fatal("Failed to create blob access: ", err)
 	}

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package buildbarn.blobstore;
 
+import "google/rpc/status.proto";
+
 option go_package = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore";
 
 // Storage configuration for Bazel Buildbarn.
@@ -33,6 +35,9 @@ message BlobAccessConfiguration {
         // Read objects from/write objects to a GRPC service that
         // implements the remote execution protocol.
         GRPCBlobAccessConfiguration grpc = 7;
+
+        // Always fail with a fixed error response.
+        google.rpc.Status error = 8;
     }
 }
 
