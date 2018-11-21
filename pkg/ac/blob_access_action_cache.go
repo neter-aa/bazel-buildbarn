@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"log"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -35,6 +36,11 @@ func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *ut
 	}
 	var actionResult remoteexecution.ActionResult
 	if err := proto.Unmarshal(data, &actionResult); err != nil {
+		if err := ac.blobAccess.Delete(ctx, digest); err == nil {
+			log.Printf("Successfully deleted corrupted blob %s", digest)
+		} else {
+			log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
+		}
 		return nil, err
 	}
 	return &actionResult, nil
