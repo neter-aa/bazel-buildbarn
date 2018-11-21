@@ -18,6 +18,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/proto"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
+
+	"google.golang.org/grpc"
 )
 
 // CreateBlobAccessObjectsFromConfig creates a pair of BlobAccess
@@ -38,7 +41,7 @@ func CreateBlobAccessObjectsFromConfig(configurationFile string, needsActionCach
 	if err != nil {
 		return nil, nil, err
 	}
-	var actionCache blobstore.BlobAccess = nil
+	var actionCache blobstore.BlobAccess
 	if needsActionCache {
 		actionCache, err = createBlobAccess(config.ActionCache, "ac", util.DigestKeyWithInstance)
 		if err != nil {
@@ -88,6 +91,22 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			circular.NewFileStateStore(stateFile))
 		if err != nil {
 			return nil, err
+		}
+	case *pb.BlobAccessConfiguration_Grpc:
+		backendType = "grpc"
+		switch storageType {
+		case "cas":
+			client, err := grpc.Dial(
+				backend.Grpc.Endpoint,
+				grpc.WithInsecure(),
+				grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+				grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
+			if err != nil {
+				return nil, err
+			}
+			implementation = blobstore.NewContentAddressableStorageBlobAccess(client, 65536)
+		default:
+			return nil, fmt.Errorf("GRPC backend type cannot be used for storage type ", storageType)
 		}
 	case *pb.BlobAccessConfiguration_Redis:
 		backendType = "redis"

@@ -210,3 +210,11 @@ go_repository(
     strip_prefix = "terminal-3.1.0",
     urls = ["https://github.com/buildkite/terminal/archive/v3.1.0.tar.gz"],
 )
+
+go_repository(
+    name = "com_github_google_uuid",
+    importpath = "github.com/google/uuid",
+    sha256 = "7e330758f7c81d9f489493fb7ae0e67d06f50753429758b64f25ad5fb2727e21",
+    strip_prefix = "uuid-1.1.0",
+    urls = ["https://github.com/google/uuid/archive/v1.1.0.tar.gz"],
+)

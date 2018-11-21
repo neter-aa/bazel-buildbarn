@@ -29,6 +29,10 @@ message BlobAccessConfiguration {
 
         // Read objects from/write objects to a circular file on disk.
         CircularBlobAccessConfiguration circular = 6;
+
+        // Read objects from/write objects to a GRPC service that
+        // implements the remote execution protocol.
+        GRPCBlobAccessConfiguration grpc = 7;
     }
 }
 
@@ -45,6 +49,11 @@ message CircularBlobAccessConfiguration {
 
     // Number of offset entries to cache in memory.
     uint32 offset_cache_size = 4;
+}
+
+message GRPCBlobAccessConfiguration {
+    // Endpoint address of the GRPC server (e.g., "localhost:8982").
+    string endpoint = 1;
 }
 
 message RedisBlobAccessConfiguration {
