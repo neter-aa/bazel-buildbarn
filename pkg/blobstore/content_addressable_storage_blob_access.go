@@ -1,10 +1,12 @@
 package blobstore
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -77,7 +79,9 @@ func (ba *contentAddressableStorageBlobAccess) Get(ctx context.Context, digest *
 
 	// Read first chunk to detect errors eagerly.
 	chunk, err := client.Recv()
-	if err != nil && err != io.EOF {
+	if err == io.EOF {
+		return sizeBytes, ioutil.NopCloser(bytes.NewBuffer(nil)), nil
+	} else if err != nil {
 		return 0, nil, err
 	}
 	return sizeBytes, &byteStreamBlobReader{
