@@ -169,8 +169,10 @@ go_repository(
 
 go_repository(
     name = "com_github_bazelbuild_remote_apis",
-    commit = "4cc20a3a58263567d4c51778e836b7a61ceb4052",
     importpath = "github.com/bazelbuild/remote-apis",
+    sha256 = "99ab1378f10854504c75bcfa43be2129d36bbba8e80a79a4216a3e3026a0985b",
+    strip_prefix = "remote-apis-ed4849810292e5fb3c844992133523f01a4ad420",
+    urls = ["https://github.com/bazelbuild/remote-apis/archive/ed4849810292e5fb3c844992133523f01a4ad420.tar.gz"],
 )
 
 go_repository(
