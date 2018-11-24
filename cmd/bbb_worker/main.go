@@ -82,15 +82,14 @@ func main() {
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
 	buildExecutor := builder.NewStorageFlushingBuildExecutor(
-		builder.NewServerLogInjectingBuildExecutor(
-			builder.NewCachingBuildExecutor(
-				builder.NewLocalBuildExecutor(
-					contentAddressableStorage,
-					environment.NewSimpleManager(),
-					logsDirectory),
-				ac.NewBlobAccessActionCache(
-					blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))),
+		builder.NewCachingBuildExecutor(
+			builder.NewLocalBuildExecutor(
+				contentAddressableStorage,
+				environment.NewSimpleManager(),
+				logsDirectory),
 			contentAddressableStorage,
+			ac.NewBlobAccessActionCache(
+				blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor")),
 			browserURL),
 		contentAddressableStorageFlusher)
 

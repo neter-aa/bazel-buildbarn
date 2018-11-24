@@ -9,7 +9,6 @@ go_library(
         "demultiplexing_build_queue.go",
         "forwarding_build_queue.go",
         "local_build_executor.go",
-        "server_log_injecting_build_executor.go",
         "storage_flushing_build_executor.go",
         "worker_build_queue.go",
     ],
