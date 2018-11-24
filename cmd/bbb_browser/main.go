@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"html/template"
 	"log"
@@ -30,7 +31,8 @@ func main() {
 	}
 
 	templates, err := template.New("templates").Funcs(template.FuncMap{
-		"basename": path.Base,
+		"basename":  path.Base,
+		"hexencode": hex.EncodeToString,
 		"shellquote": func(in string) string {
 			// Use non-breaking hyphens to improve readability of output.
 			return strings.Replace(shellquote.Join(in), "-", "‑", -1)

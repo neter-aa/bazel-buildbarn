@@ -1,4 +1,4 @@
-{{$instance := .Instance}}
+{{$instance := .Digest.GetInstance}}
 
 <table class="table">
 	<thead>
@@ -30,3 +30,5 @@
 		</tr>
 	{{end}}
 </table>
+
+<a class="btn btn-primary" href="/directory/{{.Digest.GetInstance}}/{{hexencode .Digest.GetHash}}/{{.Digest.GetSizeBytes}}/?format=tar" role="button">Download as tarball</a>

@@ -1,12 +1,18 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -62,7 +68,7 @@ func NewBrowserService(contentAddressableStorage cas.ContentAddressableStorage, 
 }
 
 type directoryInfo struct {
-	Instance  string
+	Digest    *util.Digest
 	Directory *remoteexecution.Directory
 }
 
@@ -251,7 +257,7 @@ func (s *BrowserService) handleActionCommon(w http.ResponseWriter, req *http.Req
 		directory, err := s.contentAddressableStorage.GetDirectory(ctx, inputRootDigest)
 		if err == nil {
 			actionInfo.InputRoot = &directoryInfo{
-				Instance:  inputRootDigest.GetInstance(),
+				Digest:    inputRootDigest,
 				Directory: directory,
 			}
 		} else if status.Code(err) != codes.NotFound {
@@ -292,6 +298,93 @@ func (s *BrowserService) handleCommand(w http.ResponseWriter, req *http.Request)
 	}
 }
 
+func (s *BrowserService) generateTarballDirectory(ctx context.Context, w *tar.Writer, digest *util.Digest, directory *remoteexecution.Directory, directoryPath string, getDirectory func(context.Context, *util.Digest) (*remoteexecution.Directory, error)) error {
+	// Emit child directories.
+	for _, directoryNode := range directory.Directories {
+		childPath := path.Join(directoryPath, directoryNode.Name)
+		if err := w.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeDir,
+			Name:     childPath,
+			Mode:     0777,
+		}); err != nil {
+			return err
+		}
+		childDigest, err := digest.NewDerivedDigest(directoryNode.Digest)
+		if err != nil {
+			return err
+		}
+		childDirectory, err := getDirectory(ctx, childDigest)
+		if err != nil {
+			return err
+		}
+		if err := s.generateTarballDirectory(ctx, w, childDigest, childDirectory, childPath, getDirectory); err != nil {
+			return err
+		}
+	}
+
+	// Emit symlinks.
+	for _, symlinkNode := range directory.Symlinks {
+		childPath := path.Join(directoryPath, symlinkNode.Name)
+		if err := w.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeSymlink,
+			Name:     childPath,
+			Linkname: symlinkNode.Target,
+			Mode:     0777,
+		}); err != nil {
+			return err
+		}
+	}
+
+	// Emit regular files.
+	for _, fileNode := range directory.Files {
+		childPath := path.Join(directoryPath, fileNode.Name)
+		mode := int64(0666)
+		if fileNode.IsExecutable {
+			mode = 0777
+		}
+		if err := w.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     childPath,
+			Size:     fileNode.Digest.SizeBytes,
+			Mode:     mode,
+		}); err != nil {
+			return err
+		}
+
+		childDigest, err := digest.NewDerivedDigest(fileNode.Digest)
+		if err != nil {
+			return err
+		}
+		_, r, err := s.contentAddressableStorageBlobAccess.Get(ctx, childDigest)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(w, r)
+		r.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *BrowserService) generateTarball(ctx context.Context, w http.ResponseWriter, digest *util.Digest, directory *remoteexecution.Directory, getDirectory func(context.Context, *util.Digest) (*remoteexecution.Directory, error)) {
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar.gz\"", hex.EncodeToString(digest.GetHash())))
+	gzipWriter := gzip.NewWriter(w)
+	w.Header().Set("Content-Type", "application/gzip")
+	tarWriter := tar.NewWriter(gzipWriter)
+	if err := s.generateTarballDirectory(ctx, tarWriter, digest, directory, "", getDirectory); err != nil {
+		// TODO(edsch): Any way to propagate this to the client?
+		log.Print(err)
+	}
+	if err := tarWriter.Close(); err != nil {
+		log.Print(err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		log.Print(err)
+	}
+}
+
 func (s *BrowserService) handleDirectory(w http.ResponseWriter, req *http.Request) {
 	digest, err := getDigestFromRequest(req)
 	if err != nil {
@@ -306,11 +399,15 @@ func (s *BrowserService) handleDirectory(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	if err := s.templates.ExecuteTemplate(w, "page_directory.html", directoryInfo{
-		Instance:  digest.GetInstance(),
-		Directory: directory,
-	}); err != nil {
-		log.Print(err)
+	if req.URL.Query().Get("format") == "tar" {
+		s.generateTarball(ctx, w, digest, directory, s.contentAddressableStorage.GetDirectory)
+	} else {
+		if err := s.templates.ExecuteTemplate(w, "page_directory.html", directoryInfo{
+			Digest:    digest,
+			Directory: directory,
+		}); err != nil {
+			log.Print(err)
+		}
 	}
 }
 
@@ -372,59 +469,70 @@ func (s *BrowserService) handleTree(w http.ResponseWriter, req *http.Request) {
 		Directory: tree.Root,
 	}
 
+	// Construct map of all child directories.
+	children := map[string]*remoteexecution.Directory{}
+	for _, child := range tree.Children {
+		data, err := proto.Marshal(child)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		digestGenerator := digest.NewDigestGenerator()
+		if _, err := digestGenerator.Write(data); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		children[digestGenerator.Sum().GetKey(util.DigestKeyWithoutInstance)] = child
+	}
+
 	// In case additional directory components are provided, we need
 	// to traverse the directories stored within.
-	if components := strings.FieldsFunc(mux.Vars(req)["subdirectory"], func(r rune) bool {
-		return r == '/'
-	}); len(components) > 0 {
-		// Construct map of all child directories.
-		children := map[string]*remoteexecution.Directory{}
-		for _, child := range tree.Children {
-			data, err := proto.Marshal(child)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			digestGenerator := digest.NewDigestGenerator()
-			if _, err := digestGenerator.Write(data); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			children[digestGenerator.Sum().GetKey(util.DigestKeyWithoutInstance)] = child
-		}
-
-		for _, component := range components {
-			// Find child with matching name.
-			childNode := func() *remoteexecution.DirectoryNode {
-				for _, directoryNode := range treeInfo.Directory.Directories {
-					if component == directoryNode.Name {
-						return directoryNode
-					}
+	for _, component := range strings.FieldsFunc(
+		mux.Vars(req)["subdirectory"],
+		func(r rune) bool { return r == '/' }) {
+		// Find child with matching name.
+		childNode := func() *remoteexecution.DirectoryNode {
+			for _, directoryNode := range treeInfo.Directory.Directories {
+				if component == directoryNode.Name {
+					return directoryNode
 				}
-				return nil
-			}()
-			if childNode == nil {
-				http.Error(w, "Subdirectory in tree not found", http.StatusNotFound)
-				return
 			}
+			return nil
+		}()
+		if childNode == nil {
+			http.Error(w, "Subdirectory in tree not found", http.StatusNotFound)
+			return
+		}
 
-			// Find corresponding child directory message.
-			childDigest, err := digest.NewDerivedDigest(childNode.Digest)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			childDirectory, ok := children[childDigest.GetKey(util.DigestKeyWithoutInstance)]
-			if !ok {
-				http.Error(w, "Failed to find child node in tree", http.StatusBadRequest)
-				return
-			}
-			treeInfo.HasParentDirectory = true
-			treeInfo.Directory = childDirectory
+		// Find corresponding child directory message.
+		digest, err = digest.NewDerivedDigest(childNode.Digest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		childDirectory, ok := children[digest.GetKey(util.DigestKeyWithoutInstance)]
+		if !ok {
+			http.Error(w, "Failed to find child node in tree", http.StatusBadRequest)
+			return
+		}
+		treeInfo.HasParentDirectory = true
+		treeInfo.Directory = childDirectory
+	}
+
+	if req.URL.Query().Get("format") == "tar" {
+		s.generateTarball(
+			ctx, w, digest, treeInfo.Directory,
+			func(ctx context.Context, digest *util.Digest) (*remoteexecution.Directory, error) {
+				childDirectory, ok := children[digest.GetKey(util.DigestKeyWithoutInstance)]
+				if !ok {
+					return nil, errors.New("Failed to find child node in tree")
+				}
+				return childDirectory, nil
+			})
+	} else {
+		if err := s.templates.ExecuteTemplate(w, "page_tree.html", &treeInfo); err != nil {
+			log.Print(err)
 		}
 	}
 
-	if err := s.templates.ExecuteTemplate(w, "page_tree.html", &treeInfo); err != nil {
-		log.Print(err)
-	}
 }
