@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "directory.go",
+        "file.go",
         "local_directory.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/filesystem",

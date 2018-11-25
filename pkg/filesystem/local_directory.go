@@ -87,7 +87,7 @@ func (d *localDirectory) Mkdir(name string, perm os.FileMode) error {
 	return err
 }
 
-func (d *localDirectory) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+func (d *localDirectory) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	if err := validateFilename(name); err != nil {
 		return nil, err
 	}

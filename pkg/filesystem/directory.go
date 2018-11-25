@@ -23,7 +23,7 @@ type Directory interface {
 	// Mkdir is the equivalent of os.Mkdir().
 	Mkdir(name string, perm os.FileMode) error
 	// OpenFile is the equivalent of os.OpenFile().
-	OpenFile(name string, flag int, perm os.FileMode) (*os.File, error)
+	OpenFile(name string, flag int, perm os.FileMode) (File, error)
 	// ReadDir is the equivalent of ioutil.ReadDir().
 	ReadDir() ([]os.FileInfo, error)
 	// Readlink is the equivalent of os.Readlink().
