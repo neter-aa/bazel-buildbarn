@@ -91,7 +91,7 @@ type checksumValidatingReader struct {
 func newChecksumValidatingReader(digest *util.Digest, r io.ReadCloser, invalidator func(), errorCode codes.Code) io.ReadCloser {
 	return &checksumValidatingReader{
 		ReadCloser:       r,
-		expectedChecksum: digest.GetHash(),
+		expectedChecksum: digest.GetHashBytes(),
 		partialChecksum:  digest.NewHasher(),
 		sizeLeft:         digest.GetSizeBytes(),
 		invalidator:      invalidator,

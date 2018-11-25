@@ -3,7 +3,6 @@ package blobstore
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -68,9 +67,9 @@ func (ba *contentAddressableStorageBlobAccess) Get(ctx context.Context, digest *
 	var readRequest bytestream.ReadRequest
 	sizeBytes := digest.GetSizeBytes()
 	if instance := digest.GetInstance(); instance == "" {
-		readRequest.ResourceName = fmt.Sprintf("blobs/%s/%d", hex.EncodeToString(digest.GetHash()), sizeBytes)
+		readRequest.ResourceName = fmt.Sprintf("blobs/%s/%d", digest.GetHashString(), sizeBytes)
 	} else {
-		readRequest.ResourceName = fmt.Sprintf("%s/blobs/%s/%d", instance, hex.EncodeToString(digest.GetHash()), sizeBytes)
+		readRequest.ResourceName = fmt.Sprintf("%s/blobs/%s/%d", instance, digest.GetHashString(), sizeBytes)
 	}
 	client, err := ba.byteStreamClient.Read(ctx, &readRequest)
 	if err != nil {
@@ -100,9 +99,9 @@ func (ba *contentAddressableStorageBlobAccess) Put(ctx context.Context, digest *
 
 	var resourceName string
 	if instance := digest.GetInstance(); instance == "" {
-		resourceName = fmt.Sprintf("uploads/%s/blobs/%s/%d", uuid.Must(uuid.NewRandom()), hex.EncodeToString(digest.GetHash()), digest.GetSizeBytes())
+		resourceName = fmt.Sprintf("uploads/%s/blobs/%s/%d", uuid.Must(uuid.NewRandom()), digest.GetHashString(), digest.GetSizeBytes())
 	} else {
-		resourceName = fmt.Sprintf("%s/uploads/%s/blobs/%s/%d", instance, uuid.Must(uuid.NewRandom()), hex.EncodeToString(digest.GetHash()), digest.GetSizeBytes())
+		resourceName = fmt.Sprintf("%s/uploads/%s/blobs/%s/%d", instance, uuid.Must(uuid.NewRandom()), digest.GetHashString(), digest.GetSizeBytes())
 	}
 
 	writeOffset := int64(0)
@@ -151,10 +150,10 @@ func (ba *contentAddressableStorageBlobAccess) FindMissing(ctx context.Context, 
 		InstanceName: instance,
 	}
 	for _, digest := range digests {
-		request.BlobDigests = append(request.BlobDigests, digest.GetRawDigest())
 		if digest.GetInstance() != instance {
 			return nil, status.Error(codes.InvalidArgument, "Cannot use mixed instance names in a single request")
 		}
+		request.BlobDigests = append(request.BlobDigests, digest.GetPartialDigest())
 	}
 
 	response, err := ba.contentAddressableStorageClient.FindMissingBlobs(ctx, &request)
@@ -164,8 +163,8 @@ func (ba *contentAddressableStorageBlobAccess) FindMissing(ctx context.Context, 
 
 	// Convert results back.
 	var outDigests []*util.Digest
-	for _, rawDigest := range response.MissingBlobDigests {
-		digest, err := util.NewDigest(instance, rawDigest)
+	for _, partialDigest := range response.MissingBlobDigests {
+		digest, err := util.NewDigest(instance, partialDigest)
 		if err != nil {
 			return nil, err
 		}

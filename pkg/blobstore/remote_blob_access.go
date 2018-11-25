@@ -2,7 +2,6 @@ package blobstore
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -35,7 +34,7 @@ func NewRemoteBlobAccess(address, prefix string) BlobAccess {
 }
 
 func (ba *remoteBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
-	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, hex.EncodeToString(digest.GetHash()))
+	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHashString())
 	resp, err := ctxhttp.Get(ctx, http.DefaultClient, url)
 	if err != nil {
 		fmt.Printf("Error getting digest. %s\n", err)
@@ -55,7 +54,7 @@ func (ba *remoteBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64
 }
 
 func (ba *remoteBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {
-	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, hex.EncodeToString(digest.GetHash()))
+	url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHashString())
 	req, err := http.NewRequest(http.MethodPut, url, r)
 	if err != nil {
 		r.Close()
@@ -73,7 +72,7 @@ func (ba *remoteBlobAccess) Delete(ctx context.Context, digest *util.Digest) err
 func (ba *remoteBlobAccess) FindMissing(ctx context.Context, digests []*util.Digest) ([]*util.Digest, error) {
 	var missing []*util.Digest
 	for _, digest := range digests {
-		url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, hex.EncodeToString(digest.GetHash()))
+		url := fmt.Sprintf("%s/%s/%s", ba.address, ba.prefix, digest.GetHashString())
 		resp, err := ctxhttp.Head(ctx, http.DefaultClient, url)
 		if err != nil {
 			return nil, err

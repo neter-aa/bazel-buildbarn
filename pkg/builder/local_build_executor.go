@@ -129,7 +129,7 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, outputDirecto
 			}
 			directory.Files = append(directory.Files, &remoteexecution.FileNode{
 				Name:         name,
-				Digest:       digest.GetRawDigest(),
+				Digest:       digest.GetPartialDigest(),
 				IsExecutable: isExecutable,
 			})
 		case os.ModeDir:
@@ -157,7 +157,7 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, outputDirecto
 			children[digest.GetKey(util.DigestKeyWithoutInstance)] = child
 			directory.Directories = append(directory.Directories, &remoteexecution.DirectoryNode{
 				Name:   name,
-				Digest: digest.GetRawDigest(),
+				Digest: digest.GetPartialDigest(),
 			})
 		case os.ModeSymlink:
 			target, err := outputDirectory.Readlink(name)
@@ -313,14 +313,14 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		return convertErrorToExecuteResponse(err), false
 	}
 	if stdoutDigest.GetSizeBytes() > 0 {
-		response.Result.StdoutDigest = stdoutDigest.GetRawDigest()
+		response.Result.StdoutDigest = stdoutDigest.GetPartialDigest()
 	}
 	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stderr", inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
 	if stderrDigest.GetSizeBytes() > 0 {
-		response.Result.StderrDigest = stderrDigest.GetRawDigest()
+		response.Result.StderrDigest = stderrDigest.GetPartialDigest()
 	}
 
 	// Upload output files.
@@ -335,7 +335,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		}
 		response.Result.OutputFiles = append(response.Result.OutputFiles, &remoteexecution.OutputFile{
 			Path:         outputFile,
-			Digest:       digest.GetRawDigest(),
+			Digest:       digest.GetPartialDigest(),
 			IsExecutable: isExecutable,
 		})
 	}
@@ -358,7 +358,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		if digest != nil {
 			response.Result.OutputDirectories = append(response.Result.OutputDirectories, &remoteexecution.OutputDirectory{
 				Path:       outputDirectory,
-				TreeDigest: digest.GetRawDigest(),
+				TreeDigest: digest.GetPartialDigest(),
 			})
 		}
 	}

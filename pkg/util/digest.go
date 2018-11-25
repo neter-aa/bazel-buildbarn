@@ -30,9 +30,8 @@ import (
 //   This ensures that outputs of build actions automatically use the
 //   same instance name and hashing algorithm.
 type Digest struct {
-	instance  string
-	hash      []byte
-	sizeBytes int64
+	instance      string
+	partialDigest remoteexecution.Digest
 }
 
 // NewDigest constructs a Digest object from an instance name and a
@@ -54,10 +53,6 @@ func NewDigest(instance string, partialDigest *remoteexecution.Digest) (*Digest,
 			return nil, status.Errorf(codes.InvalidArgument, "Non-hexadecimal character in digest hash: %#U", c)
 		}
 	}
-	hash, err := hex.DecodeString(partialDigest.Hash)
-	if err != nil {
-		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
-	}
 
 	// Validate the size.
 	if partialDigest.SizeBytes < 0 {
@@ -65,9 +60,8 @@ func NewDigest(instance string, partialDigest *remoteexecution.Digest) (*Digest,
 	}
 
 	return &Digest{
-		instance:  instance,
-		hash:      hash,
-		sizeBytes: partialDigest.SizeBytes,
+		instance:      instance,
+		partialDigest: *partialDigest,
 	}, nil
 }
 
@@ -91,14 +85,11 @@ func (d *Digest) NewDerivedDigest(partialDigest *remoteexecution.Digest) (*Diges
 	return NewDigest(d.instance, partialDigest)
 }
 
-// GetRawDigest encodes the digest into the format used by the remote
+// GetPartialDigest encodes the digest into the format used by the remote
 // execution protocol, so that it may be stored in messages returned to
 // the client.
-func (d *Digest) GetRawDigest() *remoteexecution.Digest {
-	return &remoteexecution.Digest{
-		Hash:      hex.EncodeToString(d.hash),
-		SizeBytes: d.sizeBytes,
-	}
+func (d *Digest) GetPartialDigest() *remoteexecution.Digest {
+	return &d.partialDigest
 }
 
 // GetInstance returns the instance name of the object.
@@ -106,14 +97,23 @@ func (d *Digest) GetInstance() string {
 	return d.instance
 }
 
-// GetHash returns the hash of the object.
-func (d *Digest) GetHash() []byte {
-	return d.hash
+// GetHashBytes returns the hash of the object as a slice of bytes.
+func (d *Digest) GetHashBytes() []byte {
+	hash, err := hex.DecodeString(d.partialDigest.Hash)
+	if err != nil {
+		log.Fatal("Failed to decode digest hash, even though its contents have already been validated")
+	}
+	return hash
+}
+
+// GetHashString returns the hash of the object as a string.
+func (d *Digest) GetHashString() string {
+	return d.partialDigest.Hash
 }
 
 // GetSizeBytes returns the size of the object, in bytes.
 func (d *Digest) GetSizeBytes() int64 {
-	return d.sizeBytes
+	return d.partialDigest.SizeBytes
 }
 
 // DigestKeyFormat is an enumeration type that determines the format of
@@ -135,9 +135,9 @@ const (
 func (d *Digest) GetKey(format DigestKeyFormat) string {
 	switch format {
 	case DigestKeyWithoutInstance:
-		return fmt.Sprintf("%s|%d", hex.EncodeToString(d.hash), d.sizeBytes)
+		return fmt.Sprintf("%s|%d", d.partialDigest.Hash, d.partialDigest.SizeBytes)
 	case DigestKeyWithInstance:
-		return fmt.Sprintf("%s|%d|%s", hex.EncodeToString(d.hash), d.sizeBytes, d.instance)
+		return fmt.Sprintf("%s|%d|%s", d.partialDigest.Hash, d.partialDigest.SizeBytes, d.instance)
 	default:
 		log.Fatal("Invalid digest key format")
 		return ""
@@ -153,12 +153,12 @@ func (d *Digest) String() string {
 // algorithm as the one that was used to create the digest, making it
 // possible to validate data against a digest.
 func (d *Digest) NewHasher() hash.Hash {
-	switch len(d.hash) {
-	case md5.Size:
+	switch len(d.partialDigest.Hash) {
+	case md5.Size * 2:
 		return md5.New()
-	case sha1.Size:
+	case sha1.Size * 2:
 		return sha1.New()
-	case sha256.Size:
+	case sha256.Size * 2:
 		return sha256.New()
 	default:
 		log.Fatal("Digest hash is of unknown type")
@@ -195,8 +195,10 @@ func (dg *DigestGenerator) Write(p []byte) (int, error) {
 // DigestGenerator.
 func (dg *DigestGenerator) Sum() *Digest {
 	return &Digest{
-		instance:  dg.instance,
-		hash:      dg.partialHash.Sum(nil),
-		sizeBytes: dg.sizeBytes,
+		instance: dg.instance,
+		partialDigest: remoteexecution.Digest{
+			Hash:      hex.EncodeToString(dg.partialHash.Sum(nil)),
+			SizeBytes: dg.sizeBytes,
+		},
 	}
 }

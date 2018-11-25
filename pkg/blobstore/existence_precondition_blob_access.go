@@ -2,7 +2,6 @@ package blobstore
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 
@@ -35,7 +34,7 @@ func (ba *existencePreconditionBlobAccess) Get(ctx context.Context, digest *util
 				Violations: []*errdetails.PreconditionFailure_Violation{
 					{
 						Type:    "MISSING",
-						Subject: fmt.Sprintf("blobs/%s/%d", hex.EncodeToString(digest.GetHash()), digest.GetSizeBytes()),
+						Subject: fmt.Sprintf("blobs/%s/%d", digest.GetHashString(), digest.GetSizeBytes()),
 					},
 				},
 			})

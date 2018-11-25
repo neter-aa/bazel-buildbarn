@@ -2,7 +2,6 @@ package builder
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 
@@ -53,7 +52,7 @@ func (be *cachingBuildExecutor) Execute(ctx context.Context, request *remoteexec
 				fmt.Sprintf(
 					"/action/%s/%s/%d/",
 					actionDigest.GetInstance(),
-					hex.EncodeToString(actionDigest.GetHash()),
+					actionDigest.GetHashString(),
 					actionDigest.GetSizeBytes()))
 			if err != nil {
 				return convertErrorToExecuteResponse(err), false
@@ -82,7 +81,7 @@ func (be *cachingBuildExecutor) Execute(ctx context.Context, request *remoteexec
 				fmt.Sprintf(
 					"/actionfailure/%s/%s/%d/",
 					actionFailureDigest.GetInstance(),
-					hex.EncodeToString(actionFailureDigest.GetHash()),
+					actionFailureDigest.GetHashString(),
 					actionFailureDigest.GetSizeBytes()))
 			if err != nil {
 				return convertErrorToExecuteResponse(err), false

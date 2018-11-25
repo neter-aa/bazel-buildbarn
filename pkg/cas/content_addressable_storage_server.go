@@ -25,8 +25,8 @@ func NewContentAddressableStorageServer(contentAddressableStorage blobstore.Blob
 
 func (s *contentAddressableStorageServer) FindMissingBlobs(ctx context.Context, in *remoteexecution.FindMissingBlobsRequest) (*remoteexecution.FindMissingBlobsResponse, error) {
 	var inDigests []*util.Digest
-	for _, rawDigest := range in.BlobDigests {
-		digest, err := util.NewDigest(in.InstanceName, rawDigest)
+	for _, partialDigest := range in.BlobDigests {
+		digest, err := util.NewDigest(in.InstanceName, partialDigest)
 		if err != nil {
 			return nil, err
 		}
@@ -36,12 +36,12 @@ func (s *contentAddressableStorageServer) FindMissingBlobs(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	var rawDigests []*remoteexecution.Digest
+	var partialDigests []*remoteexecution.Digest
 	for _, outDigest := range outDigests {
-		rawDigests = append(rawDigests, outDigest.GetRawDigest())
+		partialDigests = append(partialDigests, outDigest.GetPartialDigest())
 	}
 	return &remoteexecution.FindMissingBlobsResponse{
-		MissingBlobDigests: rawDigests,
+		MissingBlobDigests: partialDigests,
 	}, nil
 }
 

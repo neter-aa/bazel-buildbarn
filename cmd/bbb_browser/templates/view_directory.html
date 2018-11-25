@@ -31,4 +31,4 @@
 	{{end}}
 </table>
 
-<a class="btn btn-primary" href="/directory/{{.Digest.GetInstance}}/{{hexencode .Digest.GetHash}}/{{.Digest.GetSizeBytes}}/?format=tar" role="button">Download as tarball</a>
+<a class="btn btn-primary" href="/directory/{{.Digest.GetInstance}}/{{.Digest.GetHashString}}/{{.Digest.GetSizeBytes}}/?format=tar" role="button">Download as tarball</a>

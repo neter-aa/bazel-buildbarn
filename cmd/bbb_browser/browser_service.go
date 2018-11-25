@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
@@ -369,7 +368,7 @@ func (s *BrowserService) generateTarballDirectory(ctx context.Context, w *tar.Wr
 }
 
 func (s *BrowserService) generateTarball(ctx context.Context, w http.ResponseWriter, digest *util.Digest, directory *remoteexecution.Directory, getDirectory func(context.Context, *util.Digest) (*remoteexecution.Directory, error)) {
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar.gz\"", hex.EncodeToString(digest.GetHash())))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar.gz\"", digest.GetHashString()))
 	gzipWriter := gzip.NewWriter(w)
 	w.Header().Set("Content-Type", "application/gzip")
 	tarWriter := tar.NewWriter(gzipWriter)
