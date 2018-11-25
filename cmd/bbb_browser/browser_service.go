@@ -376,12 +376,15 @@ func (s *BrowserService) generateTarball(ctx context.Context, w http.ResponseWri
 	if err := s.generateTarballDirectory(ctx, tarWriter, digest, directory, "", getDirectory); err != nil {
 		// TODO(edsch): Any way to propagate this to the client?
 		log.Print(err)
+		return
 	}
 	if err := tarWriter.Close(); err != nil {
 		log.Print(err)
+		return
 	}
 	if err := gzipWriter.Close(); err != nil {
 		log.Print(err)
+		return
 	}
 }
 
