@@ -12,19 +12,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type fileInfo struct {
-	name string
-	mode os.FileMode
-}
-
-func (fi *fileInfo) Name() string {
-	return fi.name
-}
-
-func (fi *fileInfo) Mode() os.FileMode {
-	return fi.mode
-}
-
 type localDirectory struct {
 	fd int
 }
@@ -111,10 +98,7 @@ func (d *localDirectory) Lstat(name string) (FileInfo, error) {
 	default:
 		mode |= os.ModeIrregular
 	}
-	return &fileInfo{
-		name: name,
-		mode: mode,
-	}, nil
+	return NewSimpleFileInfo(name, mode), nil
 }
 
 func (d *localDirectory) Mkdir(name string, perm os.FileMode) error {
