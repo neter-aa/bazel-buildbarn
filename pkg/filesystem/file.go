@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"io"
-	"os"
 )
 
 // File is an interface for the operations that are applied on regular
@@ -14,6 +13,4 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.WriterAt
-
-	Stat() (os.FileInfo, error)
 }

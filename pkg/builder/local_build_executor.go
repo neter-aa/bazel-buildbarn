@@ -121,16 +121,16 @@ func (be *localBuildExecutor) uploadDirectory(ctx context.Context, outputDirecto
 	var directory remoteexecution.Directory
 	for _, file := range files {
 		name := file.Name()
-		switch file.Mode() & os.ModeType {
+		switch mode := file.Mode(); mode & os.ModeType {
 		case 0:
-			digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, outputDirectory, name, parentDigest)
+			digest, err := be.contentAddressableStorage.PutFile(ctx, outputDirectory, name, parentDigest)
 			if err != nil {
 				return nil, err
 			}
 			directory.Files = append(directory.Files, &remoteexecution.FileNode{
 				Name:         name,
 				Digest:       digest.GetPartialDigest(),
-				IsExecutable: isExecutable,
+				IsExecutable: (mode & 0111) != 0,
 			})
 		case os.ModeDir:
 			childDirectory, err := outputDirectory.Enter(name)
@@ -308,14 +308,14 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	// Upload command output. In the common case, the files are
 	// empty. If that's the case, don't bother setting the digest to
 	// keep the ActionResult small.
-	stdoutDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stdout", inputRootDigest)
+	stdoutDigest, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stdout", inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
 	if stdoutDigest.GetSizeBytes() > 0 {
 		response.Result.StdoutDigest = stdoutDigest.GetPartialDigest()
 	}
-	stderrDigest, _, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stderr", inputRootDigest)
+	stderrDigest, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stderr", inputRootDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
@@ -325,41 +325,79 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 
 	// Upload output files.
 	for _, outputFile := range command.OutputFiles {
-		digest, isExecutable, err := be.contentAddressableStorage.PutFile(ctx, outputParentDirectories[path.Dir(outputFile)], path.Base(outputFile), inputRootDigest)
+		outputParentDirectory := outputParentDirectories[path.Dir(outputFile)]
+		outputBaseName := path.Base(outputFile)
+		fileInfo, err := outputParentDirectory.Lstat(outputBaseName)
 		if err != nil {
-			// TODO(edsch): Output file symlinks.
 			if os.IsNotExist(err) {
 				continue
 			}
 			return convertErrorToExecuteResponse(err), false
 		}
-		response.Result.OutputFiles = append(response.Result.OutputFiles, &remoteexecution.OutputFile{
-			Path:         outputFile,
-			Digest:       digest.GetPartialDigest(),
-			IsExecutable: isExecutable,
-		})
+		switch mode := fileInfo.Mode(); mode & os.ModeType {
+		case 0:
+			digest, err := be.contentAddressableStorage.PutFile(ctx, outputParentDirectory, outputBaseName, inputRootDigest)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			response.Result.OutputFiles = append(response.Result.OutputFiles, &remoteexecution.OutputFile{
+				Path:         outputFile,
+				Digest:       digest.GetPartialDigest(),
+				IsExecutable: (mode & 0111) != 0,
+			})
+		case os.ModeSymlink:
+			target, err := outputParentDirectory.Readlink(outputBaseName)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			response.Result.OutputFileSymlinks = append(response.Result.OutputFileSymlinks, &remoteexecution.OutputSymlink{
+				Path:   outputFile,
+				Target: target,
+			})
+		default:
+			return convertErrorToExecuteResponse(fmt.Errorf("Output file %s has an unsupported file type", outputFile)), false
+		}
 	}
 
 	// Upload output directories.
 	for _, outputDirectory := range command.OutputDirectories {
-		directory, err := outputParentDirectories[path.Dir(outputDirectory)].Enter(path.Base(outputDirectory))
+		outputParentDirectory := outputParentDirectories[path.Dir(outputDirectory)]
+		outputBaseName := path.Base(outputDirectory)
+		fileInfo, err := outputParentDirectory.Lstat(outputBaseName)
 		if err != nil {
-			// TODO(edsch): Output directory symlinks.
 			if os.IsNotExist(err) {
 				continue
 			}
 			return convertErrorToExecuteResponse(err), false
 		}
-		digest, err := be.uploadTree(ctx, directory, inputRootDigest)
-		directory.Close()
-		if err != nil {
-			return convertErrorToExecuteResponse(err), false
-		}
-		if digest != nil {
-			response.Result.OutputDirectories = append(response.Result.OutputDirectories, &remoteexecution.OutputDirectory{
-				Path:       outputDirectory,
-				TreeDigest: digest.GetPartialDigest(),
+		switch mode := fileInfo.Mode(); mode & os.ModeType {
+		case os.ModeDir:
+			directory, err := outputParentDirectory.Enter(outputBaseName)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			digest, err := be.uploadTree(ctx, directory, inputRootDigest)
+			directory.Close()
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			if digest != nil {
+				response.Result.OutputDirectories = append(response.Result.OutputDirectories, &remoteexecution.OutputDirectory{
+					Path:       outputDirectory,
+					TreeDigest: digest.GetPartialDigest(),
+				})
+			}
+		case os.ModeSymlink:
+			target, err := outputParentDirectory.Readlink(outputBaseName)
+			if err != nil {
+				return convertErrorToExecuteResponse(err), false
+			}
+			response.Result.OutputDirectorySymlinks = append(response.Result.OutputDirectorySymlinks, &remoteexecution.OutputSymlink{
+				Path:   outputDirectory,
+				Target: target,
 			})
+		default:
+			return convertErrorToExecuteResponse(fmt.Errorf("Output directory %s has an unsupported file type", outputDirectory)), false
 		}
 	}
 

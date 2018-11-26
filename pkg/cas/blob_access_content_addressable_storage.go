@@ -133,36 +133,29 @@ func (cas *blobAccessContentAddressableStorage) PutActionFailure(ctx context.Con
 	return cas.putMessage(ctx, actionFailure, parentDigest)
 }
 
-func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, bool, error) {
+func (cas *blobAccessContentAddressableStorage) PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, error) {
 	file, err := directory.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
-		return nil, false, err
-	}
-
-	// Determine whether the file is executable.
-	info, err := file.Stat()
-	if err != nil {
-		file.Close()
-		return nil, false, err
+		return nil, err
 	}
 
 	// Walk through the file to compute the digest.
 	digestGenerator := parentDigest.NewDigestGenerator()
 	if _, err = io.Copy(digestGenerator, file); err != nil {
 		file.Close()
-		return nil, false, err
+		return nil, err
 	}
 	digest := digestGenerator.Sum()
 
 	// Rewind and store it.
 	if _, err := file.Seek(0, 0); err != nil {
 		file.Close()
-		return nil, false, err
+		return nil, err
 	}
 	if err := cas.blobAccess.Put(ctx, digest, digest.GetSizeBytes(), file); err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return digest, (info.Mode() & 0111) != 0, nil
+	return digest, nil
 }
 
 func (cas *blobAccessContentAddressableStorage) PutLog(ctx context.Context, log []byte, parentDigest *util.Digest) (*util.Digest, error) {

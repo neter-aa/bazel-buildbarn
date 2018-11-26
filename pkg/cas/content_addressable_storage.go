@@ -20,7 +20,7 @@ type ContentAddressableStorage interface {
 	GetTree(ctx context.Context, digest *util.Digest) (*remoteexecution.Tree, error)
 
 	PutActionFailure(ctx context.Context, failure *failure.ActionFailure, parentDigest *util.Digest) (*util.Digest, error)
-	PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, bool, error)
+	PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, error)
 	PutLog(ctx context.Context, log []byte, parentDigest *util.Digest) (*util.Digest, error)
 	PutTree(ctx context.Context, tree *remoteexecution.Tree, parentDigest *util.Digest) (*util.Digest, error)
 }

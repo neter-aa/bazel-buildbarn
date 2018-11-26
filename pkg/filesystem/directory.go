@@ -20,12 +20,14 @@ type Directory interface {
 
 	// Link is the equivalent of os.Link().
 	Link(oldName string, newDirectory Directory, newName string) error
+	// Lstat is the equivalent of os.Lstat().
+	Lstat(name string) (FileInfo, error)
 	// Mkdir is the equivalent of os.Mkdir().
 	Mkdir(name string, perm os.FileMode) error
 	// OpenFile is the equivalent of os.OpenFile().
 	OpenFile(name string, flag int, perm os.FileMode) (File, error)
 	// ReadDir is the equivalent of ioutil.ReadDir().
-	ReadDir() ([]os.FileInfo, error)
+	ReadDir() ([]FileInfo, error)
 	// Readlink is the equivalent of os.Readlink().
 	Readlink(name string) (string, error)
 	// Remove is the equivalent of os.Remove().
