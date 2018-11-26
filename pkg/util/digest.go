@@ -38,6 +38,10 @@ type Digest struct {
 // protocol-level digest object. The instance returned by this function
 // is guaranteed to be non-degenerate.
 func NewDigest(instance string, partialDigest *remoteexecution.Digest) (*Digest, error) {
+	if partialDigest == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "No digest provided")
+	}
+
 	// Validate the instance name.
 	// TODO(edsch): Maybe have an even more restrictive character set? What about length?
 	if strings.ContainsRune(instance, '|') {
