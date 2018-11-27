@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"runtime"
 	"sort"
@@ -10,6 +9,8 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type localDirectory struct {
@@ -17,8 +18,8 @@ type localDirectory struct {
 }
 
 func validateFilename(name string) error {
-	if name == "" || name == ".." || strings.ContainsRune(name, '/') {
-		return fmt.Errorf("Invalid filename: %s", name)
+	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, '/') {
+		return status.Errorf(codes.InvalidArgument, "Invalid filename: %#v", name)
 	}
 	return nil
 }
