@@ -62,10 +62,6 @@ func (be *cachingBuildExecutor) Execute(ctx context.Context, request *remoteexec
 			// Extension: store the result in the Content
 			// Addressable Storage, so the user can at least inspect
 			// it through bbb_browser.
-			actionDigest, err := util.NewDigest(request.InstanceName, request.ActionDigest)
-			if err != nil {
-				return convertErrorToExecuteResponse(err), false
-			}
 			actionFailureDigest, err := be.contentAddressableStorage.PutActionFailure(
 				ctx,
 				&failure.ActionFailure{
