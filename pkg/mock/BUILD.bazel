@@ -35,6 +35,22 @@ gomock(
     package = "mock",
 )
 
+gomock(
+    name = "environment",
+    out = "environment.go",
+    interfaces = ["Environment", "Manager"],
+    library = "//pkg/environment:go_default_library",
+    package = "mock",
+)
+
+gomock(
+    name = "filesystem",
+    out = "filesystem.go",
+    interfaces = ["Directory", "File"],
+    library = "//pkg/filesystem:go_default_library",
+    package = "mock",
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -42,10 +58,13 @@ go_library(
         ":blobstore.go",
         ":builder.go",
         ":cas.go",
+        ":environment.go",
+        ":filesystem.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/environment:go_default_library",
         "//pkg/filesystem:go_default_library",
         "//pkg/proto/failure:go_default_library",
         "//pkg/util:go_default_library",

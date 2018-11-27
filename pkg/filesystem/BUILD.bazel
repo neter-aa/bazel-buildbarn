@@ -7,8 +7,13 @@ go_library(
         "file.go",
         "file_info.go",
         "local_directory.go",
+        "simple_file_info.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/filesystem",
     visibility = ["//visibility:public"],
-    deps = ["@org_golang_x_sys//unix:go_default_library"],
+    deps = [
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_x_sys//unix:go_default_library",
+    ],
 )

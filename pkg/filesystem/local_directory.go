@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"runtime"
 	"sort"
@@ -10,28 +9,17 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
-
-type fileInfo struct {
-	name string
-	mode os.FileMode
-}
-
-func (fi *fileInfo) Name() string {
-	return fi.name
-}
-
-func (fi *fileInfo) Mode() os.FileMode {
-	return fi.mode
-}
 
 type localDirectory struct {
 	fd int
 }
 
 func validateFilename(name string) error {
-	if name == "" || name == ".." || strings.ContainsRune(name, '/') {
-		return fmt.Errorf("Invalid filename: %s", name)
+	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, '/') {
+		return status.Errorf(codes.InvalidArgument, "Invalid filename: %#v", name)
 	}
 	return nil
 }
@@ -111,10 +99,7 @@ func (d *localDirectory) Lstat(name string) (FileInfo, error) {
 	default:
 		mode |= os.ModeIrregular
 	}
-	return &fileInfo{
-		name: name,
-		mode: mode,
-	}, nil
+	return NewSimpleFileInfo(name, mode), nil
 }
 
 func (d *localDirectory) Mkdir(name string, perm os.FileMode) error {
