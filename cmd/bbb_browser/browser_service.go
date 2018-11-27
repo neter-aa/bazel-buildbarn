@@ -369,8 +369,8 @@ func (s *BrowserService) generateTarballDirectory(ctx context.Context, w *tar.Wr
 
 func (s *BrowserService) generateTarball(ctx context.Context, w http.ResponseWriter, digest *util.Digest, directory *remoteexecution.Directory, getDirectory func(context.Context, *util.Digest) (*remoteexecution.Directory, error)) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.tar.gz\"", digest.GetHashString()))
-	gzipWriter := gzip.NewWriter(w)
 	w.Header().Set("Content-Type", "application/gzip")
+	gzipWriter := gzip.NewWriter(w)
 	tarWriter := tar.NewWriter(gzipWriter)
 	if err := s.generateTarballDirectory(ctx, tarWriter, digest, directory, "", getDirectory); err != nil {
 		// TODO(edsch): Any way to propagate this to the client?
