@@ -10,6 +10,9 @@ type fileStateStore struct {
 	file ReadWriterAt
 }
 
+// NewFileStateStore creates a new storage for global metadata of a
+// circular storage backend. Right now only a set of read/write cursors
+// are stored.
 func NewFileStateStore(file ReadWriterAt) StateStore {
 	return &fileStateStore{
 		file: file,

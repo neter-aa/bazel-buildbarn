@@ -43,6 +43,10 @@ func getDigestFromRequest(req *http.Request) (*util.Digest, error) {
 		})
 }
 
+// BrowserService implements a web service that can be used to explore
+// data stored in the Content Addressable Storage and Action Cache. It
+// can show the details of actions and download their input and output
+// files.
 type BrowserService struct {
 	contentAddressableStorage           cas.ContentAddressableStorage
 	contentAddressableStorageBlobAccess blobstore.BlobAccess
@@ -50,6 +54,8 @@ type BrowserService struct {
 	templates                           *template.Template
 }
 
+// NewBrowserService constructs a BrowserService that accesses storage
+// through a set of handles.
 func NewBrowserService(contentAddressableStorage cas.ContentAddressableStorage, contentAddressableStorageBlobAccess blobstore.BlobAccess, actionCache ac.ActionCache, templates *template.Template, router *mux.Router) *BrowserService {
 	s := &BrowserService{
 		contentAddressableStorage:           contentAddressableStorage,

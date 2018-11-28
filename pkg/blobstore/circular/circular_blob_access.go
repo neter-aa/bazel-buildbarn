@@ -15,16 +15,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// OffsetStore maps a digest to an offset within the data file. This is
+// where the blob's contents may be found.
 type OffsetStore interface {
 	Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error)
 	Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error
 }
 
+// DataStore is where the data corresponding with a blob is stored. Data
+// can be accessed by providing an offset within the data store and its
+// length.
 type DataStore interface {
 	Put(r io.Reader, offset uint64) error
 	Get(offset uint64, size int64) io.ReadCloser
 }
 
+// StateStore is where global metadata of the circular storage backend
+// is stored, namely the read/write cursors where data is currently
+// being stored in the data file.
 type StateStore interface {
 	Get() (Cursors, error)
 	Put(cursors Cursors) error
@@ -42,6 +50,9 @@ type circularBlobAccess struct {
 	stateStore  StateStore
 }
 
+// NewCircularBlobAccess creates a new circular storage backend. Instead
+// of writing data to storage directly, all three storage files are
+// injected through separate interfaces.
 func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, dataSize uint64, stateStore StateStore) (blobstore.BlobAccess, error) {
 	cursors, err := stateStore.Get()
 	if err != nil {

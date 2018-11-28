@@ -8,6 +8,7 @@ type Cursors struct {
 	Write uint64
 }
 
+// Allocate a contiguous range of data.
 func (c *Cursors) Allocate(length int64, dataSize uint64) uint64 {
 	if length < 1 {
 		length = 1
@@ -24,6 +25,9 @@ func (c *Cursors) Allocate(length int64, dataSize uint64) uint64 {
 	return offset
 }
 
+// Contains returns whether the provided offset and length are contained
+// with the cursors. In effect, it returns whether the offset/length
+// pair still corresponds to valid data.
 func (c *Cursors) Contains(offset uint64, length int64) bool {
 	if length < 1 {
 		length = 1
@@ -31,6 +35,8 @@ func (c *Cursors) Contains(offset uint64, length int64) bool {
 	return offset >= c.Read && offset <= c.Write && offset+uint64(length) <= c.Write
 }
 
+// Invalidate all data up to and including the region that is provided.
+// This function is called when data corruption is detected.
 func (c *Cursors) Invalidate(offset uint64, length int64) {
 	if length < 1 {
 		length = 1
