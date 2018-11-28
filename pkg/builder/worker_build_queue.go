@@ -104,8 +104,7 @@ func (bq *workerBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecu
 			},
 			// CachePriorityCapabilities: Priorities not supported.
 			// MaxBatchTotalSize: Not used by Bazel yet.
-			// TODO(edsch): Finish adding symlinks support.
-			SymlinkAbsolutePathStrategy: remoteexecution.CacheCapabilities_UNKNOWN,
+			SymlinkAbsolutePathStrategy: remoteexecution.CacheCapabilities_ALLOWED,
 		},
 		ExecutionCapabilities: &remoteexecution.ExecutionCapabilities{
 			DigestFunction: remoteexecution.DigestFunction_SHA256,
