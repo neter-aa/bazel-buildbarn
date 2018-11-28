@@ -18,6 +18,8 @@ type forwardingBuildQueue struct {
 // Execution service that simply forwards all requests to a GRPC client. This
 // may be used by the frontend processes to forward execution requests to
 // scheduler processes in unmodified form.
+//
+// Details: https://github.com/grpc/grpc-go/issues/2297
 func NewForwardingBuildQueue(client *grpc.ClientConn) BuildQueue {
 	return &forwardingBuildQueue{
 		capabilitiesClient: remoteexecution.NewCapabilitiesClient(client),
