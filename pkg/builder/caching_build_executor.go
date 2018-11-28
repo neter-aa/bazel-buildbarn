@@ -2,8 +2,8 @@ package builder
 
 import (
 	"context"
-	"log"
 	"fmt"
+	"log"
 	"net/url"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
