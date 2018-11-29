@@ -1,4 +1,4 @@
-package blobstore
+package blobstore_test
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -41,7 +42,7 @@ func TestMerkleBlobAccessSuccess(t *testing.T) {
 			ctx, []*util.Digest{digest},
 		).Return([]*util.Digest{digest}, nil)
 
-		blobAccess := NewMerkleBlobAccess(bottomBlobAccess)
+		blobAccess := blobstore.NewMerkleBlobAccess(bottomBlobAccess)
 
 		length, r, err := blobAccess.Get(ctx, digest)
 		require.NoError(t, err)
@@ -106,7 +107,7 @@ func TestMerkleBlobAccessMalformedData(t *testing.T) {
 			})
 		}
 
-		blobAccess := NewMerkleBlobAccess(bottomBlobAccess)
+		blobAccess := blobstore.NewMerkleBlobAccess(bottomBlobAccess)
 
 		// A Get() call on corrupt data should trigger an
 		// internal error on the server.

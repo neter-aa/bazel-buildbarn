@@ -1,4 +1,4 @@
-package blobstore
+package blobstore_test
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -30,7 +31,7 @@ func TestExistencePreconditionBlobAccessGetSuccess(t *testing.T) {
 		})).Return(int64(5), ioutil.NopCloser(bytes.NewBufferString("Hello")), nil)
 
 	// Validate that the reader can still be read properly.
-	length, r, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	length, r, err := blobstore.NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("debian8", &remoteexecution.Digest{
 			Hash:      "8b1a9953c4611296a827abf8c47804d7",
 			SizeBytes: 5,
@@ -56,7 +57,7 @@ func TestExistencePreconditionBlobAccessGetResourceExhausted(t *testing.T) {
 		})).Return(int64(0), nil, status.Error(codes.ResourceExhausted, "Out of luck!"))
 
 	// The error should be passed through unmodified.
-	_, _, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	_, _, err := blobstore.NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c916e71d733d06cb77a4775de5f77fd0b480a7e8",
 			SizeBytes: 8,
@@ -79,7 +80,7 @@ func TestExistencePreconditionBlobAccessGetNotFound(t *testing.T) {
 		})).Return(int64(0), nil, status.Error(codes.NotFound, "Blob doesn't exist!"))
 
 	// The error should be translated to FailedPrecondition.
-	_, _, err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
+	_, _, err := blobstore.NewExistencePreconditionBlobAccess(bottomBlobAccess).Get(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "c015ad6ddaf8bb50689d2d7cbf1539dff6dd84473582a08ed1d15d841f4254f4",
 			SizeBytes: 7,
@@ -116,7 +117,7 @@ func TestExistencePreconditionBlobAccessPutNotFound(t *testing.T) {
 	// Unlike for Get(), the error should be passed through
 	// unmodified. This adapter should only alter the results of
 	// Get() calls.
-	err := NewExistencePreconditionBlobAccess(bottomBlobAccess).Put(
+	err := blobstore.NewExistencePreconditionBlobAccess(bottomBlobAccess).Put(
 		ctx, util.MustNewDigest("ubuntu1604", &remoteexecution.Digest{
 			Hash:      "89d5739baabbbe65be35cbe61c88e06d",
 			SizeBytes: 6,

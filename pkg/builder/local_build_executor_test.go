@@ -1,10 +1,11 @@
-package builder
+package builder_test
 
 import (
 	"context"
 	"os"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -30,7 +31,7 @@ func TestLocalBuildExecutorMissingActionDigest(t *testing.T) {
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	environmentManager := mock.NewMockManager(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "debian8",
@@ -47,7 +48,7 @@ func TestLocalBuildExecutorMalformedActionDigest(t *testing.T) {
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	environmentManager := mock.NewMockManager(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "windows10",
@@ -81,7 +82,7 @@ func TestLocalBuildExecutorActionNotInStorage(t *testing.T) {
 		})).Err())
 	environmentManager := mock.NewMockManager(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "freebsd12",
@@ -124,7 +125,7 @@ func TestLocalBuildExecutorMalformedCommandDigest(t *testing.T) {
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "macos",
@@ -164,7 +165,7 @@ func TestLocalBuildExecutorCommandNotInStorage(t *testing.T) {
 		})).Return(nil, status.Error(codes.Internal, "Storage unavailable"))
 	environmentManager := mock.NewMockManager(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "macos",
@@ -211,7 +212,7 @@ func TestLocalBuildExecutorEnvironmentAcquireFailed(t *testing.T) {
 	environmentManager := mock.NewMockManager(ctrl)
 	environmentManager.EXPECT().Acquire(nil).Return(nil, status.Error(codes.InvalidArgument, "Platform requirements not provided"))
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -296,7 +297,7 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -352,7 +353,7 @@ func TestLocalBuildExecutorInputRootNotInStorage(t *testing.T) {
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -409,7 +410,7 @@ func TestLocalBuildExecutorOutputDirectoryCreationFailure(t *testing.T) {
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
 	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "fedora",
@@ -490,7 +491,7 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 	}, nil)
 	fooDirectory.EXPECT().Readlink("bar").Return("", status.Error(codes.Internal, "Cosmic rays caused interference"))
 	fooDirectory.EXPECT().Close()
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "nintendo64",
@@ -665,7 +666,7 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 		"PWD":  "/proc/self/cwd",
 	}, "", stdout, stderr).Return(0, nil)
 	environment.EXPECT().Release()
-	localBuildExecutor := NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "ubuntu1804",

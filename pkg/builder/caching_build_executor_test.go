@@ -1,10 +1,11 @@
-package builder
+package builder_test
 
 import (
 	"context"
 	"net/url"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/failure"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -22,7 +23,7 @@ func TestCachingBuildExecutorBadActionDigest(t *testing.T) {
 	baseBuildExecutor := mock.NewMockBuildExecutor(ctrl)
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	actionCache := mock.NewMockActionCache(ctrl)
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
@@ -49,7 +50,7 @@ func TestCachingBuildExecutorNoResult(t *testing.T) {
 	}, false)
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	actionCache := mock.NewMockActionCache(ctrl)
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
@@ -94,7 +95,7 @@ func TestCachingBuildExecutorCachedSuccess(t *testing.T) {
 		&remoteexecution.ActionResult{
 			StdoutRaw: []byte("Hello, world!"),
 		}).Return(nil)
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
@@ -141,7 +142,7 @@ func TestCachingBuildExecutorCachedFailure(t *testing.T) {
 		&remoteexecution.ActionResult{
 			StdoutRaw: []byte("Hello, world!"),
 		}).Return(status.Error(codes.Internal, "Network problems"))
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
@@ -193,7 +194,7 @@ func TestCachingBuildExecutorUncachedSuccess(t *testing.T) {
 		SizeBytes: 582,
 	}), nil)
 	actionCache := mock.NewMockActionCache(ctrl)
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
@@ -246,7 +247,7 @@ func TestCachingBuildExecutorUncachedFailure(t *testing.T) {
 		},
 		gomock.Any()).Return(nil, status.Error(codes.Internal, "Network problems"))
 	actionCache := mock.NewMockActionCache(ctrl)
-	cachingBuildExecutor := NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
+	cachingBuildExecutor := builder.NewCachingBuildExecutor(baseBuildExecutor, contentAddressableStorage, actionCache, &url.URL{
 		Scheme: "https",
 		Host:   "example.com",
 	})
