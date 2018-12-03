@@ -330,4 +330,62 @@ func TestLocalDirectoryReadlinkSuccess(t *testing.T) {
 	require.NoError(t, d.Close())
 }
 
-// TODO(edsch): Add testing coverage for Remove() and Symlink().
+func TestLocalDirectoryRemoveBadName(t *testing.T) {
+	d := openTmpDir(t)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"\""), d.Remove(""))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \".\""), d.Remove("."))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"..\""), d.Remove(".."))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"foo/bar\""), d.Remove("foo/bar"))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryRemoveNonExistent(t *testing.T) {
+	d := openTmpDir(t)
+	require.True(t, os.IsNotExist(d.Remove("nonexistent")))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryRemoveDirectory(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Mkdir("directory", 0777))
+	require.NoError(t, d.Remove("directory"))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryRemoveFile(t *testing.T) {
+	d := openTmpDir(t)
+	f, err := d.OpenFile("file", os.O_CREATE|os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	require.NoError(t, d.Remove("file"))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryRemoveSymlink(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Symlink("/", "symlink"))
+	require.NoError(t, d.Remove("symlink"))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectorySymlinkBadName(t *testing.T) {
+	d := openTmpDir(t)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"\""), d.Symlink("/whatever", ""))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \".\""), d.Symlink("/whatever", "."))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"..\""), d.Symlink("/whatever", ".."))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"foo/bar\""), d.Symlink("/whatever", "foo/bar"))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectorySymlinkExistent(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Mkdir("directory", 0777))
+	require.True(t, os.IsExist(d.Symlink("/", "directory")))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectorySymlinkSuccess(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Symlink("/", "symlink"))
+	require.NoError(t, d.Close())
+}
