@@ -190,4 +190,144 @@ func TestLocalDirectoryLstatDirectory(t *testing.T) {
 	require.NoError(t, d.Close())
 }
 
-// TODO(edsch): Make testing coverage more complete?
+func TestLocalDirectoryMkdirBadName(t *testing.T) {
+	d := openTmpDir(t)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"\""), d.Mkdir("", 0777))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \".\""), d.Mkdir(".", 0777))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"..\""), d.Mkdir("..", 0777))
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"foo/bar\""), d.Mkdir("foo/bar", 0777))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryMkdirExisting(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Symlink("/", "symlink"))
+	require.True(t, os.IsExist(d.Mkdir("symlink", 0777)))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryMkdirSuccess(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Mkdir("directory", 0777))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryOpenFileBadName(t *testing.T) {
+	d := openTmpDir(t)
+	_, err := d.OpenFile("", os.O_CREATE|os.O_WRONLY, 0666)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"\""), err)
+	_, err = d.OpenFile(".", os.O_CREATE|os.O_WRONLY, 0666)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \".\""), err)
+	_, err = d.OpenFile("..", os.O_CREATE|os.O_WRONLY, 0666)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"..\""), err)
+	_, err = d.OpenFile("foo/bar", os.O_CREATE|os.O_WRONLY, 0666)
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"foo/bar\""), err)
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryOpenFileExistent(t *testing.T) {
+	d := openTmpDir(t)
+	f, err := d.OpenFile("file", os.O_CREATE|os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	_, err = d.OpenFile("file", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	require.True(t, os.IsExist(err))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryOpenFileNonExistent(t *testing.T) {
+	d := openTmpDir(t)
+	_, err := d.OpenFile("file", os.O_RDONLY, 0666)
+	require.True(t, os.IsNotExist(err))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryOpenFileSymlink(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Symlink("/etc/passwd", "symlink"))
+	_, err := d.OpenFile("symlink", os.O_RDONLY, 0)
+	require.Equal(t, syscall.ELOOP, err)
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryOpenFileSuccess(t *testing.T) {
+	d := openTmpDir(t)
+	f, err := d.OpenFile("file", os.O_CREATE|os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadDir(t *testing.T) {
+	syscall.Umask(0)
+	d := openTmpDir(t)
+
+	// Prepare file system.
+	f, err := d.OpenFile("file", os.O_CREATE|os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	require.NoError(t, d.Mkdir("directory", 0777))
+	require.NoError(t, d.Symlink("/", "symlink"))
+
+	// Validate directory listing.
+	files, err := d.ReadDir()
+	require.NoError(t, err)
+	require.Equal(t, 3, len(files))
+	require.Equal(t, "directory", files[0].Name())
+	require.Equal(t, 0777|os.ModeDir, files[0].Mode())
+	require.Equal(t, "file", files[1].Name())
+	require.Equal(t, os.FileMode(0666), files[1].Mode())
+	require.Equal(t, "symlink", files[2].Name())
+	require.Equal(t, 0777|os.ModeSymlink, files[2].Mode())
+
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadlinkBadName(t *testing.T) {
+	d := openTmpDir(t)
+	_, err := d.Readlink("")
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"\""), err)
+	_, err = d.Readlink(".")
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \".\""), err)
+	_, err = d.Readlink("..")
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"..\""), err)
+	_, err = d.Readlink("foo/bar")
+	require.Equal(t, status.Error(codes.InvalidArgument, "Invalid filename: \"foo/bar\""), err)
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadlinkNonExistent(t *testing.T) {
+	d := openTmpDir(t)
+	_, err := d.Readlink("nonexistent")
+	require.True(t, os.IsNotExist(err))
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadlinkDirectory(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Mkdir("directory", 0777))
+	_, err := d.Readlink("directory")
+	require.Equal(t, syscall.EINVAL, err)
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadlinkFile(t *testing.T) {
+	d := openTmpDir(t)
+	f, err := d.OpenFile("file", os.O_CREATE|os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+	_, err = d.Readlink("file")
+	require.Equal(t, syscall.EINVAL, err)
+	require.NoError(t, d.Close())
+}
+
+func TestLocalDirectoryReadlinkSuccess(t *testing.T) {
+	d := openTmpDir(t)
+	require.NoError(t, d.Symlink("/foo/bar/baz", "symlink"))
+	target, err := d.Readlink("symlink")
+	require.NoError(t, err)
+	require.Equal(t, "/foo/bar/baz", target)
+	require.NoError(t, d.Close())
+}
+
+// TODO(edsch): Add testing coverage for Remove() and Symlink().
