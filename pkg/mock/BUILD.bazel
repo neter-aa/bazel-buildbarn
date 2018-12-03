@@ -22,7 +22,11 @@ gomock(
 gomock(
     name = "builder",
     out = "builder.go",
-    interfaces = ["BuildExecutor"],
+    interfaces = [
+        "BuildExecutor",
+        "BuildQueue",
+        "BuildQueueGetter",
+    ],
     library = "//pkg/builder:go_default_library",
     package = "mock",
 )
@@ -38,7 +42,10 @@ gomock(
 gomock(
     name = "environment",
     out = "environment.go",
-    interfaces = ["Environment", "Manager"],
+    interfaces = [
+        "Environment",
+        "Manager",
+    ],
     library = "//pkg/environment:go_default_library",
     package = "mock",
 )
@@ -46,8 +53,22 @@ gomock(
 gomock(
     name = "filesystem",
     out = "filesystem.go",
-    interfaces = ["Directory", "File"],
+    interfaces = [
+        "Directory",
+        "File",
+    ],
     library = "//pkg/filesystem:go_default_library",
+    package = "mock",
+)
+
+gomock(
+    name = "remoteexecution",
+    out = "remoteexecution.go",
+    interfaces = [
+        "Execution_ExecuteServer",
+        "Execution_WaitExecutionServer",
+    ],
+    library = "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
     package = "mock",
 )
 
@@ -60,15 +81,19 @@ go_library(
         ":cas.go",
         ":environment.go",
         ":filesystem.go",
+        ":remoteexecution.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/builder:go_default_library",
         "//pkg/environment:go_default_library",
         "//pkg/filesystem:go_default_library",
         "//pkg/proto/failure:go_default_library",
         "//pkg/util:go_default_library",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
+        "@go_googleapis//google/longrunning:longrunning_go_proto",
+        "@org_golang_google_grpc//metadata:go_default_library",
     ],
 )

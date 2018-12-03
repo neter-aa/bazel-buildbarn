@@ -177,8 +177,10 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
     importpath = "github.com/golang/mock",
+    sha256 = "0dc7dbcf6d83b4318e26d9481dfa9405042288d666835f810e0b70ada2f54e11",
+    strip_prefix = "mock-aedf487a10d1285646a046e4c9537d7854e820e1",
+    urls = ["https://github.com/EdSchouten/mock/archive/aedf487a10d1285646a046e4c9537d7854e820e1.tar.gz"],
 )
 
 go_repository(

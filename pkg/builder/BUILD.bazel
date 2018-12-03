@@ -39,6 +39,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "caching_build_executor_test.go",
+        "demultiplexing_build_queue_test.go",
         "local_build_executor_test.go",
     ],
     embed = [":go_default_library"],
