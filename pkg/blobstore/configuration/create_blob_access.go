@@ -110,7 +110,7 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			}
 			implementation = blobstore.NewContentAddressableStorageBlobAccess(client, 65536)
 		default:
-			return nil, fmt.Errorf("GRPC backend type cannot be used for storage type ", storageType)
+			return nil, fmt.Errorf("GRPC backend type cannot be used for storage type %#v", storageType)
 		}
 	case *pb.BlobAccessConfiguration_Redis:
 		backendType = "redis"
