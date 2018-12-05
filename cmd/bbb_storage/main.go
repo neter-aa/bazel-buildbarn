@@ -21,14 +21,15 @@ import (
 
 func main() {
 	var (
-		blobstoreConfig = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		blobstoreConfig  = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		webListenAddress = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Parse()
 
 	// Web server for metrics and profiling.
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		log.Fatal(http.ListenAndServe(":80", nil))
+		log.Fatal(http.ListenAndServe(*webListenAddress, nil))
 	}()
 
 	// Storage access.

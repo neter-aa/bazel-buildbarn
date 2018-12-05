@@ -19,14 +19,15 @@ import (
 
 func main() {
 	var (
-		jobsPendingMax = flag.Uint("jobs-pending-max", 100, "Maximum number of build actions to be enqueued")
+		jobsPendingMax   = flag.Uint("jobs-pending-max", 100, "Maximum number of build actions to be enqueued")
+		webListenAddress = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Parse()
 
 	// Web server for metrics and profiling.
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		log.Fatal(http.ListenAndServe(":80", nil))
+		log.Fatal(http.ListenAndServe(*webListenAddress, nil))
 	}()
 
 	executionServer, schedulerServer := builder.NewWorkerBuildQueue(util.DigestKeyWithInstance, *jobsPendingMax)

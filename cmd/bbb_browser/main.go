@@ -19,7 +19,8 @@ import (
 
 func main() {
 	var (
-		blobstoreConfig = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		blobstoreConfig  = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		webListenAddress = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Parse()
 
@@ -49,5 +50,5 @@ func main() {
 		ac.NewBlobAccessActionCache(actionCacheBlobAccess),
 		templates,
 		router)
-	log.Fatal(http.ListenAndServe(":80", router))
+	log.Fatal(http.ListenAndServe(*webListenAddress, router))
 }

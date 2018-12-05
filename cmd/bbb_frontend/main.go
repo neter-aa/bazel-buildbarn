@@ -39,6 +39,7 @@ func main() {
 	var (
 		actionCacheAllowUpdates = flag.Bool("ac-allow-updates", false, "Allow clients to write into the action cache")
 		blobstoreConfig         = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		webListenAddress        = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Var(&schedulersList, "scheduler", "Backend capable of executing build actions. Example: debian8|hostname-of-debian8-scheduler:8981")
 	flag.Parse()
@@ -46,7 +47,7 @@ func main() {
 	// Web server for metrics and profiling.
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
-		log.Fatal(http.ListenAndServe(":80", nil))
+		log.Fatal(http.ListenAndServe(*webListenAddress, nil))
 	}()
 
 	// Storage access.
