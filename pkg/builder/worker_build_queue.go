@@ -135,11 +135,11 @@ func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remo
 		}
 
 		job = &workerBuildJob{
-			name:             uuid.NewV4().String(),
-			actionDigest:     in.ActionDigest,
-			deduplicationKey: deduplicationKey,
-			executeRequest:   *in,
-			stage:            remoteexecution.ExecuteOperationMetadata_QUEUED,
+			name:                    uuid.NewV4().String(),
+			actionDigest:            in.ActionDigest,
+			deduplicationKey:        deduplicationKey,
+			executeRequest:          *in,
+			stage:                   remoteexecution.ExecuteOperationMetadata_QUEUED,
 			executeTransitionWakeup: sync.NewCond(&bq.jobsLock),
 		}
 		bq.jobsNameMap[job.name] = job

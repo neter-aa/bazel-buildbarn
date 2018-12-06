@@ -29,7 +29,7 @@ type cachingBuildExecutor struct {
 // so that the user may inspect the Action and ActionResult in detail.
 func NewCachingBuildExecutor(base BuildExecutor, contentAddressableStorage cas.ContentAddressableStorage, actionCache ac.ActionCache, browserURL *url.URL) BuildExecutor {
 	return &cachingBuildExecutor{
-		base: base,
+		base:                      base,
 		contentAddressableStorage: contentAddressableStorage,
 		actionCache:               actionCache,
 		browserURL:                browserURL,

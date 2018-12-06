@@ -662,8 +662,8 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 		"bazel-out/k8-fastbuild/bin/_objs/hello/hello.pic.o",
 	}, map[string]string{
 		"BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN": "1",
-		"PATH": "/bin:/usr/bin",
-		"PWD":  "/proc/self/cwd",
+		"PATH":                              "/bin:/usr/bin",
+		"PWD":                               "/proc/self/cwd",
 	}, "", stdout, stderr).Return(0, nil)
 	environment.EXPECT().Release()
 	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
