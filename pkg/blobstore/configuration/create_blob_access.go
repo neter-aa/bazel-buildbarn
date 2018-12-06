@@ -21,6 +21,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -70,10 +71,6 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			return nil, err
 		}
 		defer circularDirectory.Close()
-		offsetFile, err := circularDirectory.OpenFile("offset", os.O_RDWR|os.O_CREATE, 0644)
-		if err != nil {
-			return nil, err
-		}
 		dataFile, err := circularDirectory.OpenFile("data", os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return nil, err
@@ -83,10 +80,42 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			return nil, err
 		}
 
-		implementation, err = circular.NewCircularBlobAccess(
-			circular.NewCachingOffsetStore(
+		var offsetStore circular.OffsetStore
+		switch digestKeyFormat {
+		case util.DigestKeyWithoutInstance:
+			// Open a single offset file for all entries. This is
+			// sufficient for the Content Addressable Storage.
+			offsetFile, err := circularDirectory.OpenFile("offset", os.O_RDWR|os.O_CREATE, 0644)
+			if err != nil {
+				return nil, err
+			}
+			offsetStore = circular.NewCachingOffsetStore(
 				circular.NewFileOffsetStore(offsetFile, backend.Circular.OffsetFileSizeBytes),
-				uint(backend.Circular.OffsetCacheSize)),
+				uint(backend.Circular.OffsetCacheSize))
+		case util.DigestKeyWithInstance:
+			// Open an offset file for every instance. This is
+			// required for the Action Cache.
+			offsetStores := map[string]circular.OffsetStore{}
+			for _, instance := range backend.Circular.Instance {
+				offsetFile, err := circularDirectory.OpenFile("offset."+instance, os.O_RDWR|os.O_CREATE, 0644)
+				if err != nil {
+					return nil, err
+				}
+				offsetStores[instance] = circular.NewCachingOffsetStore(
+					circular.NewFileOffsetStore(offsetFile, backend.Circular.OffsetFileSizeBytes),
+					uint(backend.Circular.OffsetCacheSize))
+			}
+			offsetStore = circular.NewDemultiplexingOffsetStore(func(instance string) (circular.OffsetStore, error) {
+				offsetStore, ok := offsetStores[instance]
+				if !ok {
+					return nil, status.Errorf(codes.InvalidArgument, "Unknown instance name")
+				}
+				return offsetStore, nil
+			})
+		}
+
+		implementation, err = circular.NewCircularBlobAccess(
+			offsetStore,
 			circular.NewFileDataStore(dataFile, backend.Circular.DataFileSizeBytes),
 			backend.Circular.DataFileSizeBytes,
 			circular.NewFileStateStore(stateFile))

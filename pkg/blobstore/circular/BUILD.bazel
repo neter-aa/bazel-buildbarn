@@ -6,6 +6,7 @@ go_library(
         "caching_offset_store.go",
         "circular_blob_access.go",
         "cursors.go",
+        "demultiplexing_offset_store.go",
         "file_data_store.go",
         "file_offset_store.go",
         "file_state_store.go",

@@ -18,8 +18,8 @@ import (
 // OffsetStore maps a digest to an offset within the data file. This is
 // where the blob's contents may be found.
 type OffsetStore interface {
-	Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error)
-	Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error
+	Get(digest *util.Digest, cursors Cursors) (uint64, int64, bool, error)
+	Put(digest *util.Digest, offset uint64, length int64, cursors Cursors) error
 }
 
 // DataStore is where the data corresponding with a blob is stored. Data
@@ -86,7 +86,7 @@ func (ba *circularBlobAccess) flushStateStore() {
 
 func (ba *circularBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	ba.lock.Lock()
-	offset, length, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors)
+	offset, length, ok, err := ba.offsetStore.Get(digest, ba.cursors)
 	ba.lock.Unlock()
 	if err != nil {
 		return 0, nil, err
@@ -112,7 +112,7 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 	var err error
 	ba.lock.Lock()
 	if ba.cursors.Contains(offset, sizeBytes) {
-		err = ba.offsetStore.Put(NewSimpleDigest(digest), offset, sizeBytes, ba.cursors)
+		err = ba.offsetStore.Put(digest, offset, sizeBytes, ba.cursors)
 	} else {
 		err = errors.New("Data became stale before write completed")
 	}
@@ -125,7 +125,7 @@ func (ba *circularBlobAccess) Delete(ctx context.Context, digest *util.Digest) e
 	ba.lock.Lock()
 	defer ba.lock.Unlock()
 
-	if offset, length, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors); err != nil {
+	if offset, length, ok, err := ba.offsetStore.Get(digest, ba.cursors); err != nil {
 		return err
 	} else if ok {
 		ba.cursors.Invalidate(offset, length)
@@ -139,7 +139,7 @@ func (ba *circularBlobAccess) FindMissing(ctx context.Context, digests []*util.D
 
 	var missingDigests []*util.Digest
 	for _, digest := range digests {
-		if _, _, ok, err := ba.offsetStore.Get(NewSimpleDigest(digest), ba.cursors); err != nil {
+		if _, _, ok, err := ba.offsetStore.Get(digest, ba.cursors); err != nil {
 			return nil, err
 		} else if !ok {
 			missingDigests = append(missingDigests, digest)

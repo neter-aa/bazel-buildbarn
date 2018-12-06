@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -53,13 +54,13 @@ func init() {
 // distinguish a record from random garbage data. It allows us to
 // validate that an entry could have been stored in that location in the
 // first place.
-type offsetRecord [len(SimpleDigest{}) + 4 + 8 + 8]byte
+type offsetRecord [len(simpleDigest{}) + 4 + 8 + 8]byte
 
-func newOffsetRecord(digest SimpleDigest, offset uint64, length int64) offsetRecord {
+func newOffsetRecord(digest simpleDigest, offset uint64, length int64) offsetRecord {
 	var offsetRecord offsetRecord
 	copy(offsetRecord[:], digest[:])
-	binary.LittleEndian.PutUint64(offsetRecord[len(SimpleDigest{})+4:], offset)
-	binary.LittleEndian.PutUint64(offsetRecord[len(SimpleDigest{})+4+8:], uint64(length))
+	binary.LittleEndian.PutUint64(offsetRecord[len(simpleDigest{})+4:], offset)
+	binary.LittleEndian.PutUint64(offsetRecord[len(simpleDigest{})+4+8:], uint64(length))
 	return offsetRecord
 }
 
@@ -67,7 +68,7 @@ func newOffsetRecord(digest SimpleDigest, offset uint64, length int64) offsetRec
 // within the offset file. It computes an FNV-1a hash from the dige
 func (or *offsetRecord) getSlot() uint32 {
 	slot := uint32(2166136261)
-	for i := len(SimpleDigest{}) + 4; i > 0; i-- {
+	for i := len(simpleDigest{}) + 4; i > 0; i-- {
 		slot ^= uint32(or[i-1])
 		slot *= 16777619
 	}
@@ -75,24 +76,24 @@ func (or *offsetRecord) getSlot() uint32 {
 }
 
 func (or *offsetRecord) getAttempt() uint32 {
-	return binary.LittleEndian.Uint32(or[len(SimpleDigest{}):])
+	return binary.LittleEndian.Uint32(or[len(simpleDigest{}):])
 }
 
 func (or *offsetRecord) getOffset() uint64 {
-	return binary.LittleEndian.Uint64(or[len(SimpleDigest{})+4:])
+	return binary.LittleEndian.Uint64(or[len(simpleDigest{})+4:])
 }
 
 func (or *offsetRecord) getLength() int64 {
-	return int64(binary.LittleEndian.Uint64(or[len(SimpleDigest{})+4+8:]))
+	return int64(binary.LittleEndian.Uint64(or[len(simpleDigest{})+4+8:]))
 }
 
 func (or *offsetRecord) digestAndAttemptEqual(other offsetRecord) bool {
-	return bytes.Equal(or[:len(SimpleDigest{})+4], other[:len(SimpleDigest{})+4])
+	return bytes.Equal(or[:len(simpleDigest{})+4], other[:len(simpleDigest{})+4])
 }
 
 func (or *offsetRecord) withAttempt(attempt uint32) offsetRecord {
 	newRecord := *or
-	binary.LittleEndian.PutUint32(newRecord[len(SimpleDigest{}):], attempt)
+	binary.LittleEndian.PutUint32(newRecord[len(simpleDigest{}):], attempt)
 	return newRecord
 }
 
@@ -137,8 +138,8 @@ func (os *fileOffsetStore) putRecordAtPosition(record offsetRecord, position int
 	return err
 }
 
-func (os *fileOffsetStore) Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error) {
-	record := newOffsetRecord(digest, 0, 0)
+func (os *fileOffsetStore) Get(digest *util.Digest, cursors Cursors) (uint64, int64, bool, error) {
+	record := newOffsetRecord(newSimpleDigest(digest), 0, 0)
 	for iteration := uint32(1); ; iteration++ {
 		if iteration >= maximumIterations {
 			operationsIterations.WithLabelValues("Get", "TooManyIterations").Observe(float64(iteration))
@@ -200,10 +201,10 @@ func (os *fileOffsetStore) putRecord(record offsetRecord, cursors Cursors) (offs
 	return record.withAttempt(attempt + 1), true, nil
 }
 
-func (os *fileOffsetStore) Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error {
+func (os *fileOffsetStore) Put(digest *util.Digest, offset uint64, length int64, cursors Cursors) error {
 	// Insert the new record. Doing this may yield another that got
 	// displaced. Iteratively try to re-insert those.
-	record := newOffsetRecord(digest, offset, length)
+	record := newOffsetRecord(newSimpleDigest(digest), offset, length)
 	for iteration := 1; ; iteration++ {
 		if iteration > maximumIterations {
 			operationsIterations.WithLabelValues("Put", "TooManyIterations").Observe(float64(iteration))

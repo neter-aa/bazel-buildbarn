@@ -2,10 +2,12 @@ package circular
 
 import (
 	"encoding/binary"
+
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 )
 
 type cachedRecord struct {
-	digest SimpleDigest
+	digest simpleDigest
 	offset uint64
 	length int64
 }
@@ -31,17 +33,18 @@ func NewCachingOffsetStore(backend OffsetStore, size uint) OffsetStore {
 	}
 }
 
-func (os *cachingOffsetStore) Get(digest SimpleDigest, cursors Cursors) (uint64, int64, bool, error) {
-	slot := binary.LittleEndian.Uint32(digest[:]) % uint32(len(os.table))
+func (os *cachingOffsetStore) Get(digest *util.Digest, cursors Cursors) (uint64, int64, bool, error) {
+	simpleDigest := newSimpleDigest(digest)
+	slot := binary.LittleEndian.Uint32(simpleDigest[:]) % uint32(len(os.table))
 	foundRecord := os.table[slot]
-	if foundRecord.digest == digest && cursors.Contains(foundRecord.offset, foundRecord.length) {
+	if foundRecord.digest == simpleDigest && cursors.Contains(foundRecord.offset, foundRecord.length) {
 		return foundRecord.offset, foundRecord.length, true, nil
 	}
 
 	offset, length, found, err := os.backend.Get(digest, cursors)
 	if err == nil && found {
 		os.table[slot] = cachedRecord{
-			digest: digest,
+			digest: simpleDigest,
 			offset: offset,
 			length: length,
 		}
@@ -49,14 +52,15 @@ func (os *cachingOffsetStore) Get(digest SimpleDigest, cursors Cursors) (uint64,
 	return offset, length, found, err
 }
 
-func (os *cachingOffsetStore) Put(digest SimpleDigest, offset uint64, length int64, cursors Cursors) error {
+func (os *cachingOffsetStore) Put(digest *util.Digest, offset uint64, length int64, cursors Cursors) error {
 	if err := os.backend.Put(digest, offset, length, cursors); err != nil {
 		return err
 	}
 
-	slot := binary.LittleEndian.Uint32(digest[:]) % uint32(len(os.table))
+	simpleDigest := newSimpleDigest(digest)
+	slot := binary.LittleEndian.Uint32(simpleDigest[:]) % uint32(len(os.table))
 	os.table[slot] = cachedRecord{
-		digest: digest,
+		digest: simpleDigest,
 		offset: offset,
 		length: length,
 	}

@@ -54,6 +54,12 @@ message CircularBlobAccessConfiguration {
 
     // Number of offset entries to cache in memory.
     uint32 offset_cache_size = 4;
+
+    // Instances for which to store entries. For the Content Addressable
+    // Storage, this field may be omitted, as data for all instances is
+    // stored together. For the Action Cache, this field is required, as
+    // every instance needs its own offset file and cache.
+    repeated string instance = 5;
 }
 
 message GRPCBlobAccessConfiguration {
