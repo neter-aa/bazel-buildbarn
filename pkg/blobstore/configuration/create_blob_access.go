@@ -127,19 +127,19 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		implementation = blobstore.NewErrorBlobAccess(status.ErrorProto(backend.Error))
 	case *pb.BlobAccessConfiguration_Grpc:
 		backendType = "grpc"
+		client, err := grpc.Dial(
+			backend.Grpc.Endpoint,
+			grpc.WithInsecure(),
+			grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+			grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
+		if err != nil {
+			return nil, err
+		}
 		switch storageType {
+		case "ac":
+			implementation = blobstore.NewActionCacheBlobAccess(client)
 		case "cas":
-			client, err := grpc.Dial(
-				backend.Grpc.Endpoint,
-				grpc.WithInsecure(),
-				grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-				grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
-			if err != nil {
-				return nil, err
-			}
 			implementation = blobstore.NewContentAddressableStorageBlobAccess(client, 65536)
-		default:
-			return nil, fmt.Errorf("GRPC backend type cannot be used for storage type %#v", storageType)
 		}
 	case *pb.BlobAccessConfiguration_Redis:
 		backendType = "redis"
