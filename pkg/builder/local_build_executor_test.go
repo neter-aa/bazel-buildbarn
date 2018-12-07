@@ -210,7 +210,7 @@ func TestLocalBuildExecutorEnvironmentAcquireFailed(t *testing.T) {
 		OutputFiles: []string{"foo"},
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	environmentManager.EXPECT().Acquire(nil).Return(nil, status.Error(codes.InvalidArgument, "Platform requirements not provided"))
+	environmentManager.EXPECT().Acquire(map[string]string{}).Return(nil, status.Error(codes.InvalidArgument, "Platform requirements not provided"))
 	logsDirectory := mock.NewMockDirectory(ctrl)
 	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
 
@@ -284,7 +284,7 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(nil).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	buildDirectory.EXPECT().Mkdir("Hello", os.FileMode(0777)).Return(nil)
 	helloDirectory := mock.NewMockDirectory(ctrl)
@@ -348,7 +348,7 @@ func TestLocalBuildExecutorInputRootNotInStorage(t *testing.T) {
 		})).Return(nil, status.Error(codes.Internal, "Storage is offline"))
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(nil).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
@@ -404,7 +404,7 @@ func TestLocalBuildExecutorOutputDirectoryCreationFailure(t *testing.T) {
 		})).Return(&remoteexecution.Directory{}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(nil).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	buildDirectory.EXPECT().Mkdir("foo", os.FileMode(0777)).Return(status.Error(codes.Internal, "Out of disk space"))
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
@@ -478,7 +478,7 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 		}), nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(nil).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Run(ctx, []string{"touch", "foo"}, map[string]string{"PATH": "/bin:/usr/bin"}, "", stdout, stderr).Return(0, nil)
@@ -642,13 +642,8 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 	// Command execution.
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(&remoteexecution.Platform{
-		Properties: []*remoteexecution.Platform_Property{
-			{
-				Name:  "container-image",
-				Value: "docker://gcr.io/cloud-marketplace/google/rbe-debian8@sha256:4893599fb00089edc8351d9c26b31d3f600774cb5addefb00c70fdb6ca797abf",
-			},
-		},
+	environmentManager.EXPECT().Acquire(map[string]string{
+		"container-image": "docker://gcr.io/cloud-marketplace/google/rbe-debian8@sha256:4893599fb00089edc8351d9c26b31d3f600774cb5addefb00c70fdb6ca797abf",
 	}).Return(environment, nil)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Run(ctx, []string{

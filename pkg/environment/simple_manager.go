@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
-	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 )
 
 const (
@@ -26,7 +25,7 @@ func NewSimpleManager() Manager {
 	return &simpleManager{}
 }
 
-func (em *simpleManager) Acquire(platform *remoteexecution.Platform) (Environment, error) {
+func (em *simpleManager) Acquire(platformProperties map[string]string) (Environment, error) {
 	// Provide a clean temporary/home directory.
 	os.RemoveAll(pathTempRoot)
 	if err := os.Mkdir(pathTempRoot, 0777); err != nil {
