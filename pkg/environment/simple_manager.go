@@ -58,7 +58,7 @@ func (e *simpleEnvironment) GetBuildDirectory() filesystem.Directory {
 
 func (e *simpleEnvironment) Run(ctx context.Context, arguments []string, environmentVariables map[string]string, workingDirectory string, stdout io.Writer, stderr io.Writer) (int, error) {
 	if len(arguments) < 1 {
-		return 0, errors.New("Insufficent number of command arguments")
+		return 0, errors.New("Insufficient number of command arguments")
 	}
 	cmd := exec.CommandContext(ctx, arguments[0], arguments[1:]...)
 	cmd.Dir = filepath.Join(pathBuildRoot, workingDirectory)
