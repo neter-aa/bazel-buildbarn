@@ -431,10 +431,10 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	logsDirectory := mock.NewMockDirectory(ctrl)
 	stdout := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0)).Return(stdout, nil)
+	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stdout, nil)
 	stdout.EXPECT().Close()
 	stderr := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0)).Return(stderr, nil)
+	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stderr, nil)
 	stderr.EXPECT().Close()
 	contentAddressableStorage.EXPECT().GetAction(
 		ctx, util.MustNewDigest("nintendo64", &remoteexecution.Digest{
@@ -541,10 +541,10 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 	// Creation of log files.
 	logsDirectory := mock.NewMockDirectory(ctrl)
 	stdout := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0)).Return(stdout, nil)
+	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stdout, nil)
 	stdout.EXPECT().Close()
 	stderr := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0)).Return(stderr, nil)
+	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stderr, nil)
 	stderr.EXPECT().Close()
 
 	// Read operations against the Content Addressable Storage.

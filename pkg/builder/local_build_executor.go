@@ -104,13 +104,13 @@ func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexe
 		environmentVariables[environmentVariable.Name] = environmentVariable.Value
 	}
 
-	stdout, err := be.logsDirectory.OpenFile("stdout", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+	stdout, err := be.logsDirectory.OpenFile("stdout", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return 0, util.StatusWrap(err, "Failed to open stdout")
 	}
 	defer stdout.Close()
 
-	stderr, err := be.logsDirectory.OpenFile("stderr", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0)
+	stderr, err := be.logsDirectory.OpenFile("stderr", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return 0, util.StatusWrap(err, "Failed to open stderr")
 	}
