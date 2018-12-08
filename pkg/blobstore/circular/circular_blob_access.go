@@ -70,6 +70,9 @@ func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, dataSiz
 	return ba, nil
 }
 
+// TODO(edsch): Move this out of circularBlobAccess into an adapter for
+// StateStore. Also improve the logic, so that we allocate regions of
+// data ahead of time to prevent spurious data corruption.
 func (ba *circularBlobAccess) flushStateStore() {
 	for {
 		time.Sleep(time.Minute)
