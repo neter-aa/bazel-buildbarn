@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash"
 	"log"
-	"strings"
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 
@@ -42,11 +41,8 @@ func NewDigest(instance string, partialDigest *remoteexecution.Digest) (*Digest,
 		return nil, status.Errorf(codes.InvalidArgument, "No digest provided")
 	}
 
-	// Validate the instance name.
-	// TODO(edsch): Maybe have an even more restrictive character set? What about length?
-	if strings.ContainsRune(instance, '|') {
-		return nil, status.Errorf(codes.InvalidArgument, "Instance name cannot contain pipe character")
-	}
+	// TODO(edsch): Validate the instance name. Maybe have a
+	// restrictive character set? What about length?
 
 	// Validate the hash.
 	if len(partialDigest.Hash) != md5.Size*2 && len(partialDigest.Hash) != sha1.Size*2 && len(partialDigest.Hash) != sha256.Size*2 {
@@ -139,9 +135,9 @@ const (
 func (d *Digest) GetKey(format DigestKeyFormat) string {
 	switch format {
 	case DigestKeyWithoutInstance:
-		return fmt.Sprintf("%s|%d", d.partialDigest.Hash, d.partialDigest.SizeBytes)
+		return fmt.Sprintf("%s-%d", d.partialDigest.Hash, d.partialDigest.SizeBytes)
 	case DigestKeyWithInstance:
-		return fmt.Sprintf("%s|%d|%s", d.partialDigest.Hash, d.partialDigest.SizeBytes, d.instance)
+		return fmt.Sprintf("%s-%d-%s", d.partialDigest.Hash, d.partialDigest.SizeBytes, d.instance)
 	default:
 		log.Fatal("Invalid digest key format")
 		return ""
