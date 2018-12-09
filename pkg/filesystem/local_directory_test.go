@@ -389,3 +389,5 @@ func TestLocalDirectorySymlinkSuccess(t *testing.T) {
 	require.NoError(t, d.Symlink("/", "symlink"))
 	require.NoError(t, d.Close())
 }
+
+// TODO(edsch): Add testing coverage for RemoveAll().

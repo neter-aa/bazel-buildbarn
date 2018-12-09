@@ -32,6 +32,8 @@ type Directory interface {
 	Readlink(name string) (string, error)
 	// Remove is the equivalent of os.Remove().
 	Remove(name string) error
+	// RemoveAll is the equivalent of os.RemoveAll().
+	RemoveAll(name string) error
 	// Symlink is the equivalent of os.Symlink().
 	Symlink(oldName string, newName string) error
 }

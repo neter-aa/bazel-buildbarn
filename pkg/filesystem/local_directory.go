@@ -191,6 +191,62 @@ func (d *localDirectory) Remove(name string) error {
 	return err2
 }
 
+func (d *localDirectory) removeAllChildren() error {
+	children, err := d.ReadDir()
+	if err != nil {
+		return err
+	}
+	for _, child := range children {
+		name := child.Name()
+		if child.Mode() & os.ModeType == os.ModeDir {
+			// A directory. Remove all children.
+			// TODO(edsch): Call chmod(700) to ensure
+			// directory can be accessed?
+			subdirectory, err := d.Enter(name)
+			if err != nil {
+				return err
+			}
+			err = subdirectory.(*localDirectory).removeAllChildren()
+			subdirectory.Close()
+			if err != nil {
+				return err
+			}
+			if err := unix.Unlinkat(d.fd, name, unix.AT_REMOVEDIR); err != nil {
+				return err
+			}
+		} else {
+			// Not a directory. Remove it immediately.
+			if err := unix.Unlinkat(d.fd, name, 0); err != nil {
+				return err
+			}
+		}
+	}
+	runtime.KeepAlive(d)
+	return nil
+}
+
+func (d *localDirectory) RemoveAll(name string) error {
+	// TODO(edsch): Call chmod(700) to ensure directory can be accessed?
+	if subdirectory, err := d.Enter(name); err == nil {
+		// A directory. Remove all children.
+		err := subdirectory.(*localDirectory).removeAllChildren()
+		subdirectory.Close()
+		if err != nil {
+			return err
+		}
+		err = unix.Unlinkat(d.fd, name, unix.AT_REMOVEDIR)
+		runtime.KeepAlive(d)
+		return err
+	} else if err == syscall.ENOTDIR {
+		// Not a directory. Remove it immediately.
+		err := unix.Unlinkat(d.fd, name, 0)
+		runtime.KeepAlive(d)
+		return err
+	} else {
+		return err
+	}
+}
+
 func (d *localDirectory) Symlink(oldName string, newName string) error {
 	if err := validateFilename(newName); err != nil {
 		return err
