@@ -29,7 +29,8 @@ Multiple backends can be used in a single deployment to combine their
 individual strengths. For example, Redis is efficient at storing small
 objects, whereas S3 is better suited for large objects. Bazel Buildbarn
 can be configured to partition objects in the Content Addressable
-Storage across backends by size.
+Storage across backends by size. It is also possible to use an
+experimental GRPC-based storage server called `bbb_storage`.
 
 Below is a diagram of what a typical Bazel Buildbarn deployment may look
 like. In this diagram, the arrows represent the direction in which
