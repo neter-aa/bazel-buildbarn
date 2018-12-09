@@ -67,6 +67,10 @@ files that you may use to run Bazel Buildbarn on Kubernetes. Only YAML
 files for Bazel Buildbarn itself are provided. Instructions on how to
 set up dependencies, such as Redis and S3, are not included.
 
+The `demo/` directory contains a shell script that demonstrates how
+Buildbarn can be launched on a single system, without using container
+technology, Kubernetes, etc.
+
 ## Using Bazel Buildbarn
 
 Bazel can be configured to perform remote execution against Bazel Buildbarn by
