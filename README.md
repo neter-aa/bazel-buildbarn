@@ -62,14 +62,15 @@ You can add this repository to an existing workspace and use
 [`container_push()`](https://github.com/bazelbuild/rules_docker#container_push-1)
 rules to push these container images to a container registry of choice.
 
-The `kubernetes/` directory in this repository contains example YAML
-files that you may use to run Bazel Buildbarn on Kubernetes. Only YAML
-files for Bazel Buildbarn itself are provided. Instructions on how to
-set up dependencies, such as Redis and S3, are not included.
+The `deployments/kubernetes/` directory in this repository contains
+example YAML files that you may use to run Bazel Buildbarn on
+Kubernetes. Only YAML files for Bazel Buildbarn itself are provided.
+Instructions on how to set up dependencies, such as Redis and S3, are
+not included.
 
-The `demo/` directory contains a shell script that demonstrates how
-Buildbarn can be launched on a single system, without using container
-technology, Kubernetes, etc.
+The `deployments/demo/` directory contains a shell script that
+demonstrates how Buildbarn can be launched on a single system, without
+using container technology, Kubernetes, etc.
 
 ## Using Bazel Buildbarn
 

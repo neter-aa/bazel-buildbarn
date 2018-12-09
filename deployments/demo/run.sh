@@ -5,7 +5,7 @@ set -eux
 # Golang architecture of the current system.
 ARCH=darwin_amd64_pure_stripped
 # Location where the Buildbarn source tree is stored.
-BBB_SRC="$(pwd)/.."
+BBB_SRC="$(pwd)/../.."
 
 CURWD="$(pwd)"
 trap 'kill $(jobs -p)' EXIT TERM INT
