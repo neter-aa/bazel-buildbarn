@@ -8,6 +8,7 @@ go_library(
         "content_addressable_storage_server.go",
         "directory_caching_content_addressable_storage.go",
         "hardlinking_content_addressable_storage.go",
+        "read_write_decoupling_content_addressable_storage.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/cas",
     visibility = ["//visibility:public"],
