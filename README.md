@@ -42,11 +42,17 @@ network connections are established.
 One common use case for this implementation is to be run in Docker
 containers on Kubernetes. In such environments it is
 generally impossible to use [sandboxfs](https://github.com/bazelbuild/sandboxfs/),
-meaning `bbb_worker` uses basic UNIX credentials management (privilege
-separation) to provide a rudimentary form of sandboxing. The
-`bbb_worker` daemon runs in one container, while the build action is
-started by `bbb_runner` in another container. Input files are only
-readable to the latter.
+meaning `bbb_worker` can use basic UNIX credentials management
+(privilege separation) to provide a rudimentary form of sandboxing. The
+`bbb_worker` daemon runs in one container preparing the build directory,
+while the build action is started by a helper process called
+`bbb_runner`, running in another container. Input files in the build
+directory cannot be written to by the latter.
+
+It is possible to hook into `bbb_worker`'s execution process by
+writing your own runner process [that implements the GRPC protocol](https://github.com/EdSchouten/bazel-buildbarn/blob/master/pkg/proto/runner/runner.proto).
+Such a runner process could for example invoke commands using a CPU
+emulator.
 
 ## Setting up Bazel Buildbarn
 
