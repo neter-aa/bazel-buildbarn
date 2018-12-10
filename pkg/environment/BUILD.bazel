@@ -3,11 +3,21 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "action_digest_subdirectory_manager.go",
         "environment.go",
+        "local_execution_environment.go",
         "manager.go",
-        "simple_manager.go",
+        "remote_execution_environment.go",
+        "singleton_manager.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/environment",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/filesystem:go_default_library"],
+    deps = [
+        "//pkg/filesystem:go_default_library",
+        "//pkg/proto/runner:go_default_library",
+        "//pkg/util:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
+    ],
 )

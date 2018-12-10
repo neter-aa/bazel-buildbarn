@@ -3,7 +3,7 @@
 set -eux
 
 # Golang architecture of the current system.
-ARCH=darwin_amd64_pure_stripped
+ARCH="$(uname | tr '[A-Z]' '[a-z]')_amd64_pure_stripped"
 # Location where the Buildbarn source tree is stored.
 BBB_SRC="$(pwd)/../.."
 
@@ -11,7 +11,7 @@ CURWD="$(pwd)"
 trap 'kill $(jobs -p)' EXIT TERM INT
 
 # Clean up data from previous run.
-rm -rf worker
+rm -rf runner worker
 mkdir -p storage-ac storage-cas worker
 
 # Launch frontend, scheduler, storage, browser and worker.
@@ -33,7 +33,11 @@ mkdir -p storage-ac storage-cas worker
     -blobstore-config "${CURWD}/frontend-worker-blobstore.conf" \
     -browser-url http://localhost:7983/ \
     -concurrency 4 \
+    -runner "unix://${CURWD}/runner" \
     -scheduler localhost:8981 \
     -web.listen-address localhost:7984) &
+(cd worker &&
+ exec "${BBB_SRC}/bazel-bin/cmd/bbb_runner/${ARCH}/bbb_runner" \
+    -listen-path "${CURWD}/runner") &
 
 wait

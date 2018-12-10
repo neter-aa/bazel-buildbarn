@@ -11,6 +11,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
@@ -39,16 +40,14 @@ func init() {
 type localBuildExecutor struct {
 	contentAddressableStorage cas.ContentAddressableStorage
 	environmentManager        environment.Manager
-	logsDirectory             filesystem.Directory
 }
 
 // NewLocalBuildExecutor returns a BuildExecutor that executes build
 // steps on the local system.
-func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage, environmentManager environment.Manager, logsDirectory filesystem.Directory) BuildExecutor {
+func NewLocalBuildExecutor(contentAddressableStorage cas.ContentAddressableStorage, environmentManager environment.Manager) BuildExecutor {
 	return &localBuildExecutor{
 		contentAddressableStorage: contentAddressableStorage,
 		environmentManager:        environmentManager,
-		logsDirectory:             logsDirectory,
 	}
 }
 
@@ -96,27 +95,6 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, partialD
 		}
 	}
 	return nil
-}
-
-func (be *localBuildExecutor) runCommand(ctx context.Context, command *remoteexecution.Command, environment environment.Environment) (int, error) {
-	environmentVariables := map[string]string{}
-	for _, environmentVariable := range command.EnvironmentVariables {
-		environmentVariables[environmentVariable.Name] = environmentVariable.Value
-	}
-
-	stdout, err := be.logsDirectory.OpenFile("stdout", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return 0, util.StatusWrap(err, "Failed to open stdout")
-	}
-	defer stdout.Close()
-
-	stderr, err := be.logsDirectory.OpenFile("stderr", os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return 0, util.StatusWrap(err, "Failed to open stderr")
-	}
-	defer stderr.Close()
-
-	return environment.Run(ctx, command.Arguments, environmentVariables, command.WorkingDirectory, stdout, stderr)
 }
 
 func (be *localBuildExecutor) uploadDirectory(ctx context.Context, outputDirectory filesystem.Directory, parentDigest *util.Digest, children map[string]*remoteexecution.Directory, components []string) (*remoteexecution.Directory, error) {
@@ -259,7 +237,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 			platformProperties[platformProperty.Name] = platformProperty.Value
 		}
 	}
-	environment, err := be.environmentManager.Acquire(platformProperties)
+	environment, err := be.environmentManager.Acquire(actionDigest, platformProperties)
 	if err != nil {
 		return convertErrorToExecuteResponse(util.StatusWrap(err, "Failed to acquire build environment")), false
 	}
@@ -307,7 +285,17 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		timeAfterPrepareFilesytem.Sub(timeAfterGetActionCommand).Seconds())
 
 	// Invoke command.
-	exitCode, err := be.runCommand(ctx, command, environment)
+	environmentVariables := map[string]string{}
+	for _, environmentVariable := range command.EnvironmentVariables {
+		environmentVariables[environmentVariable.Name] = environmentVariable.Value
+	}
+	runResponse, err := environment.Run(ctx, &runner.RunRequest{
+		Arguments:            command.Arguments,
+		EnvironmentVariables: environmentVariables,
+		WorkingDirectory:     command.WorkingDirectory,
+		StdoutPath:           ".stdout.txt",
+		StderrPath:           ".stderr.txt",
+	})
 	if err != nil {
 		return convertErrorToExecuteResponse(err), false
 	}
@@ -317,21 +305,21 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 
 	response := &remoteexecution.ExecuteResponse{
 		Result: &remoteexecution.ActionResult{
-			ExitCode: int32(exitCode),
+			ExitCode: runResponse.ExitCode,
 		},
 	}
 
 	// Upload command output. In the common case, the files are
 	// empty. If that's the case, don't bother setting the digest to
 	// keep the ActionResult small.
-	stdoutDigest, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stdout", actionDigest)
+	stdoutDigest, err := be.contentAddressableStorage.PutFile(ctx, buildDirectory, ".stdout.txt", actionDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(util.StatusWrap(err, "Failed to store stdout")), false
 	}
 	if stdoutDigest.GetSizeBytes() > 0 {
 		response.Result.StdoutDigest = stdoutDigest.GetPartialDigest()
 	}
-	stderrDigest, err := be.contentAddressableStorage.PutFile(ctx, be.logsDirectory, "stderr", actionDigest)
+	stderrDigest, err := be.contentAddressableStorage.PutFile(ctx, buildDirectory, ".stderr.txt", actionDigest)
 	if err != nil {
 		return convertErrorToExecuteResponse(util.StatusWrap(err, "Failed to store stderr")), false
 	}

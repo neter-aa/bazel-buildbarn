@@ -8,6 +8,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/mock/gomock"
@@ -30,8 +31,7 @@ func TestLocalBuildExecutorMissingActionDigest(t *testing.T) {
 	defer ctrl.Finish()
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	environmentManager := mock.NewMockManager(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "debian8",
@@ -47,8 +47,7 @@ func TestLocalBuildExecutorMalformedActionDigest(t *testing.T) {
 	defer ctrl.Finish()
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
 	environmentManager := mock.NewMockManager(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "windows10",
@@ -81,8 +80,7 @@ func TestLocalBuildExecutorActionNotInStorage(t *testing.T) {
 			},
 		})).Err())
 	environmentManager := mock.NewMockManager(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "freebsd12",
@@ -124,8 +122,7 @@ func TestLocalBuildExecutorMalformedCommandDigest(t *testing.T) {
 		},
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "macos",
@@ -164,8 +161,7 @@ func TestLocalBuildExecutorCommandNotInStorage(t *testing.T) {
 			SizeBytes: 123,
 		})).Return(nil, status.Error(codes.Internal, "Storage unavailable"))
 	environmentManager := mock.NewMockManager(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "macos",
@@ -210,9 +206,14 @@ func TestLocalBuildExecutorEnvironmentAcquireFailed(t *testing.T) {
 		OutputFiles: []string{"foo"},
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{}).Return(nil, status.Error(codes.InvalidArgument, "Platform requirements not provided"))
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("netbsd", &remoteexecution.Digest{
+			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
+			SizeBytes: 7,
+		}),
+		map[string]string{},
+	).Return(nil, status.Error(codes.InvalidArgument, "Platform requirements not provided"))
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -284,7 +285,13 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("netbsd", &remoteexecution.Digest{
+			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
+			SizeBytes: 7,
+		}),
+		map[string]string{},
+	).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	buildDirectory.EXPECT().Mkdir("Hello", os.FileMode(0777)).Return(nil)
 	helloDirectory := mock.NewMockDirectory(ctrl)
@@ -296,8 +303,7 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 	worldDirectory.EXPECT().Close()
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -348,12 +354,17 @@ func TestLocalBuildExecutorInputRootNotInStorage(t *testing.T) {
 		})).Return(nil, status.Error(codes.Internal, "Storage is offline"))
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("netbsd", &remoteexecution.Digest{
+			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
+			SizeBytes: 7,
+		}),
+		map[string]string{},
+	).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "netbsd",
@@ -404,13 +415,18 @@ func TestLocalBuildExecutorOutputDirectoryCreationFailure(t *testing.T) {
 		})).Return(&remoteexecution.Directory{}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("fedora", &remoteexecution.Digest{
+			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
+			SizeBytes: 7,
+		}),
+		map[string]string{},
+	).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
 	buildDirectory.EXPECT().Mkdir("foo", os.FileMode(0777)).Return(status.Error(codes.Internal, "Out of disk space"))
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
 	environment.EXPECT().Release()
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "fedora",
@@ -429,13 +445,6 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 	ctrl, ctx := gomock.WithContext(context.Background(), t)
 	defer ctrl.Finish()
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	stdout := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stdout, nil)
-	stdout.EXPECT().Close()
-	stderr := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stderr, nil)
-	stderr.EXPECT().Close()
 	contentAddressableStorage.EXPECT().GetAction(
 		ctx, util.MustNewDigest("nintendo64", &remoteexecution.Digest{
 			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
@@ -466,22 +475,36 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 			Hash:      "7777777777777777777777777777777777777777777777777777777777777777",
 			SizeBytes: 42,
 		})).Return(&remoteexecution.Directory{}, nil)
-	contentAddressableStorage.EXPECT().PutFile(ctx, logsDirectory, "stdout", gomock.Any()).Return(
+	buildDirectory := mock.NewMockDirectory(ctrl)
+	contentAddressableStorage.EXPECT().PutFile(ctx, buildDirectory, ".stdout.txt", gomock.Any()).Return(
 		util.MustNewDigest("nintendo64", &remoteexecution.Digest{
 			Hash:      "0000000000000000000000000000000000000000000000000000000000000005",
 			SizeBytes: 567,
 		}), nil)
-	contentAddressableStorage.EXPECT().PutFile(ctx, logsDirectory, "stderr", gomock.Any()).Return(
+	contentAddressableStorage.EXPECT().PutFile(ctx, buildDirectory, ".stderr.txt", gomock.Any()).Return(
 		util.MustNewDigest("nintendo64", &remoteexecution.Digest{
 			Hash:      "0000000000000000000000000000000000000000000000000000000000000006",
 			SizeBytes: 678,
 		}), nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{}).Return(environment, nil)
-	buildDirectory := mock.NewMockDirectory(ctrl)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("nintendo64", &remoteexecution.Digest{
+			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
+			SizeBytes: 7,
+		}),
+		map[string]string{},
+	).Return(environment, nil)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
-	environment.EXPECT().Run(ctx, []string{"touch", "foo"}, map[string]string{"PATH": "/bin:/usr/bin"}, "", stdout, stderr).Return(0, nil)
+	environment.EXPECT().Run(ctx, &runner.RunRequest{
+		Arguments:            []string{"touch", "foo"},
+		EnvironmentVariables: map[string]string{"PATH": "/bin:/usr/bin"},
+		WorkingDirectory:     "",
+		StdoutPath:           ".stdout.txt",
+		StderrPath:           ".stderr.txt",
+	}).Return(&runner.RunResponse{
+		ExitCode: 0,
+	}, nil)
 	environment.EXPECT().Release()
 	buildDirectory.EXPECT().Lstat("foo").Return(filesystem.NewSimpleFileInfo("foo", 0777|os.ModeDir), nil)
 	fooDirectory := mock.NewMockDirectory(ctrl)
@@ -491,7 +514,7 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 	}, nil)
 	fooDirectory.EXPECT().Readlink("bar").Return("", status.Error(codes.Internal, "Cosmic rays caused interference"))
 	fooDirectory.EXPECT().Close()
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "nintendo64",
@@ -537,15 +560,6 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 	helloDirectory.EXPECT().Close()
 	helloDirectory.EXPECT().Lstat("hello.pic.d").Return(filesystem.NewSimpleFileInfo("hello.pic.d", 0666), nil)
 	helloDirectory.EXPECT().Lstat("hello.pic.o").Return(filesystem.NewSimpleFileInfo("hello.pic.o", 0777), nil)
-
-	// Creation of log files.
-	logsDirectory := mock.NewMockDirectory(ctrl)
-	stdout := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stdout", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stdout, nil)
-	stdout.EXPECT().Close()
-	stderr := mock.NewMockFile(ctrl)
-	logsDirectory.EXPECT().OpenFile("stderr", os.O_APPEND|os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(0600)).Return(stderr, nil)
-	stderr.EXPECT().Close()
 
 	// Read operations against the Content Addressable Storage.
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
@@ -618,12 +632,12 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 		}), buildDirectory, "hello.cc", false).Return(nil)
 
 	// Write operations against the Content Addressable Storage.
-	contentAddressableStorage.EXPECT().PutFile(ctx, logsDirectory, "stdout", gomock.Any()).Return(
+	contentAddressableStorage.EXPECT().PutFile(ctx, buildDirectory, ".stdout.txt", gomock.Any()).Return(
 		util.MustNewDigest("ubuntu1804", &remoteexecution.Digest{
 			Hash:      "0000000000000000000000000000000000000000000000000000000000000005",
 			SizeBytes: 567,
 		}), nil)
-	contentAddressableStorage.EXPECT().PutFile(ctx, logsDirectory, "stderr", gomock.Any()).Return(
+	contentAddressableStorage.EXPECT().PutFile(ctx, buildDirectory, ".stderr.txt", gomock.Any()).Return(
 		util.MustNewDigest("ubuntu1804", &remoteexecution.Digest{
 			Hash:      "0000000000000000000000000000000000000000000000000000000000000006",
 			SizeBytes: 678,
@@ -642,26 +656,39 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 	// Command execution.
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockEnvironment(ctrl)
-	environmentManager.EXPECT().Acquire(map[string]string{
-		"container-image": "docker://gcr.io/cloud-marketplace/google/rbe-debian8@sha256:4893599fb00089edc8351d9c26b31d3f600774cb5addefb00c70fdb6ca797abf",
-	}).Return(environment, nil)
+	environmentManager.EXPECT().Acquire(
+		util.MustNewDigest("ubuntu1804", &remoteexecution.Digest{
+			Hash:      "0000000000000000000000000000000000000000000000000000000000000001",
+			SizeBytes: 123,
+		}),
+		map[string]string{
+			"container-image": "docker://gcr.io/cloud-marketplace/google/rbe-debian8@sha256:4893599fb00089edc8351d9c26b31d3f600774cb5addefb00c70fdb6ca797abf",
+		}).Return(environment, nil)
 	environment.EXPECT().GetBuildDirectory().Return(buildDirectory)
-	environment.EXPECT().Run(ctx, []string{
-		"/usr/local/bin/clang",
-		"-MD",
-		"-MF",
-		"bazel-out/k8-fastbuild/bin/_objs/hello/hello.pic.d",
-		"-c",
-		"hello.cc",
-		"-o",
-		"bazel-out/k8-fastbuild/bin/_objs/hello/hello.pic.o",
-	}, map[string]string{
-		"BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN": "1",
-		"PATH":                              "/bin:/usr/bin",
-		"PWD":                               "/proc/self/cwd",
-	}, "", stdout, stderr).Return(0, nil)
+	environment.EXPECT().Run(ctx, &runner.RunRequest{
+		Arguments: []string{
+			"/usr/local/bin/clang",
+			"-MD",
+			"-MF",
+			"bazel-out/k8-fastbuild/bin/_objs/hello/hello.pic.d",
+			"-c",
+			"hello.cc",
+			"-o",
+			"bazel-out/k8-fastbuild/bin/_objs/hello/hello.pic.o",
+		},
+		EnvironmentVariables: map[string]string{
+			"BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN": "1",
+			"PATH":                              "/bin:/usr/bin",
+			"PWD":                               "/proc/self/cwd",
+		},
+		WorkingDirectory: "",
+		StdoutPath:       ".stdout.txt",
+		StderrPath:       ".stderr.txt",
+	}).Return(&runner.RunResponse{
+		ExitCode: 0,
+	}, nil)
 	environment.EXPECT().Release()
-	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager, logsDirectory)
+	localBuildExecutor := builder.NewLocalBuildExecutor(contentAddressableStorage, environmentManager)
 
 	executeResponse, mayBeCached := localBuildExecutor.Execute(ctx, &remoteexecution.ExecuteRequest{
 		InstanceName: "ubuntu1804",

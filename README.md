@@ -3,8 +3,7 @@
 Bazel Buildbarn is an implementation of a Bazel
 [buildfarm](https://en.wikipedia.org/wiki/Compile_farm) written in the
 Go programming language. The intent behind this implementation is that
-it is fast and easy to scale. It consists of the following four
-components:
+it is fast and easy to scale. Important components include:
 
 - `bbb_frontend`: A service capable of processing RPCs from Bazel. It
   can store build input and serve cached build output and action results.
@@ -45,8 +44,9 @@ containers on Kubernetes. In such environments it is
 generally impossible to use [sandboxfs](https://github.com/bazelbuild/sandboxfs/),
 meaning `bbb_worker` uses basic UNIX credentials management (privilege
 separation) to provide a rudimentary form of sandboxing. The
-`bbb_worker` daemon runs as user `root`, whereas the build action is run
-as user `build`. Input files are only readable to the latter.
+`bbb_worker` daemon runs in one container, while the build action is
+started by `bbb_runner` in another container. Input files are only
+readable to the latter.
 
 ## Setting up Bazel Buildbarn
 
