@@ -198,7 +198,7 @@ func (d *localDirectory) removeAllChildren() error {
 	}
 	for _, child := range children {
 		name := child.Name()
-		if child.Mode() & os.ModeType == os.ModeDir {
+		if child.Mode()&os.ModeType == os.ModeDir {
 			// A directory. Remove all children.
 			// TODO(edsch): Call chmod(700) to ensure
 			// directory can be accessed?
