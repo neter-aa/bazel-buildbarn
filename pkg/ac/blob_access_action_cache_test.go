@@ -81,7 +81,7 @@ func TestBlobAccessActionCacheGetSuccess(t *testing.T) {
 		&remoteexecution.Digest{
 			Hash:      "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c",
 			SizeBytes: 11,
-		})).Return(int64(11), ioutil.NopCloser(bytes.NewBuffer([]byte{
+		})).Return(int64(134), ioutil.NopCloser(bytes.NewBuffer([]byte{
 		0x12, 0x83, 0x01, 0x0a, 0x3a, 0x62, 0x61, 0x7a,
 		0x65, 0x6c, 0x2d, 0x6f, 0x75, 0x74, 0x2f, 0x6b,
 		0x38, 0x2d, 0x66, 0x61, 0x73, 0x74, 0x62, 0x75,
