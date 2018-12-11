@@ -75,8 +75,7 @@ func main() {
 				blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
-	actionCache := ac.NewBlobAccessActionCache(
-		blobstore.NewMetricsBlobAccess(actionCacheBlobAccess, "ac_build_executor"))
+	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
 
 	// Create connection with scheduler.
 	schedulerConnection, err := grpc.Dial(
@@ -127,6 +126,9 @@ func main() {
 			contentAddressableStorageWriter, contentAddressableStorageFlusher := blobstore.NewBatchedStoreBlobAccess(
 				blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
 				util.DigestKeyWithoutInstance, 100)
+			contentAddressableStorageWriter = blobstore.NewMetricsBlobAccess(
+				contentAddressableStorageWriter,
+				"cas_batched_store")
 			contentAddressableStorage := cas.NewReadWriteDecouplingContentAddressableStorage(
 				contentAddressableStorageReader,
 				cas.NewBlobAccessContentAddressableStorage(contentAddressableStorageWriter))
