@@ -10,6 +10,9 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/golang/protobuf/proto"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type blobAccessActionCache struct {
@@ -36,12 +39,14 @@ func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *ut
 	}
 	var actionResult remoteexecution.ActionResult
 	if err := proto.Unmarshal(data, &actionResult); err != nil {
+		// Malformed data stored in the Action Cache. Attempt to
+		// delete the data and report it as if absent.
 		if err := ac.blobAccess.Delete(ctx, digest); err == nil {
 			log.Printf("Successfully deleted corrupted blob %s", digest)
 		} else {
 			log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
 		}
-		return nil, err
+		return nil, status.Errorf(codes.NotFound, "Failed to unmarshal message: %s", err)
 	}
 	return &actionResult, nil
 }
@@ -49,7 +54,7 @@ func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *ut
 func (ac *blobAccessActionCache) PutActionResult(ctx context.Context, digest *util.Digest, result *remoteexecution.ActionResult) error {
 	data, err := proto.Marshal(result)
 	if err != nil {
-		return err
+		return status.Errorf(codes.InvalidArgument, "Failed to marshal message: %s", err)
 	}
 	return ac.blobAccess.Put(ctx, digest, int64(len(data)), ioutil.NopCloser(bytes.NewBuffer(data)))
 }
