@@ -1,3 +1,4 @@
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
@@ -17,5 +18,13 @@ go_binary(
     name = "bbb_runner",
     embed = [":go_default_library"],
     pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+container_image(
+    name = "bbb_runner_container",
+    base = "//tools/debian8_base",
+    entrypoint = ["/bbb_runner"],
+    files = [":bbb_runner"],
     visibility = ["//visibility:public"],
 )

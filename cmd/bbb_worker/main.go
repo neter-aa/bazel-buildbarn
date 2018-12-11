@@ -88,34 +88,26 @@ func main() {
 	}
 	schedulerClient := scheduler.NewSchedulerClient(schedulerConnection)
 
-	// Either execute commands directly or using a separate runner
-	// process. Due to the interaction between threads, forking and
-	// execve() returning ETXTBSY, concurrent execution can only be
-	// used in combination with a runner process.
-	// TODO(edsch): Maybe remove support for runnerless execution at
-	// some point?
-	var executionEnvironment environment.Environment
-	if *runnerAddress != "" {
-		runnerConnection, err := grpc.Dial(
-			*runnerAddress,
-			grpc.WithInsecure(),
-			grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
-			grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
-		if err != nil {
-			log.Fatal("Failed to create runner RPC client: ", err)
-		}
-		executionEnvironment = environment.NewRemoteExecutionEnvironment(runnerConnection, rootDirectory)
-	} else {
-		if *concurrency > 1 {
-			log.Fatal("Concurrent builds requires the use of a separate runner process. See https://github.com/golang/go/issues/22315 for details.")
-		}
-		executionEnvironment = environment.NewLocalExecutionEnvironment(rootDirectory, ".")
+	// Execute commands using a separate runner process. Due to the
+	// interaction between threads, forking and execve() returning
+	// ETXTBSY, concurrent execution of build actions can only be
+	// used in combination with a runner process. Having a separate
+	// runner process also makes it possible to apply privilege
+	// separation.
+	runnerConnection, err := grpc.Dial(
+		*runnerAddress,
+		grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
+	if err != nil {
+		log.Fatal("Failed to create runner RPC client: ", err)
 	}
 
 	// Create a per-action directory named after the action digest, so that
 	// multiple actions may be run concurrently within the same environment.
 	environmentManager := environment.NewActionDigestSubdirectoryManager(
-		environment.NewSingletonManager(executionEnvironment),
+		environment.NewSingletonManager(
+			environment.NewRemoteExecutionEnvironment(runnerConnection, rootDirectory)),
 		util.DigestKeyWithoutInstance)
 
 	for i := 0; i < *concurrency; i++ {
