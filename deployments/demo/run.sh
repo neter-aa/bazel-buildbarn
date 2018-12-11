@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+# Self-contained Buildbarn setup that can be run on your own system.
+#
+# Place the following options in ~/.bazelrc, so that you can let Bazel
+# use it by running 'bazel build --config=demo <targets>'.
+#
+# build:demo --genrule_strategy=remote
+# build:demo --jobs=8
+# build:demo --remote_executor=localhost:8980
+# build:demo --remote_instance_name=local
+# build:demo --spawn_strategy=remote
+# build:demo --strategy=Closure=remote
+# build:demo --strategy=Javac=remote
+
 set -eux
 
 # Golang architecture of the current system.
