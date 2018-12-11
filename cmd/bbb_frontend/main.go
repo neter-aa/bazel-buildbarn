@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
@@ -89,7 +88,7 @@ func main() {
 	)
 	remoteexecution.RegisterActionCacheServer(s, ac.NewActionCacheServer(actionCache, *actionCacheAllowUpdates))
 	remoteexecution.RegisterContentAddressableStorageServer(s, cas.NewContentAddressableStorageServer(contentAddressableStorageBlobAccess))
-	bytestream.RegisterByteStreamServer(s, blobstore.NewByteStreamServer(contentAddressableStorageBlobAccess, 1<<16))
+	bytestream.RegisterByteStreamServer(s, cas.NewByteStreamServer(contentAddressableStorageBlobAccess, 1<<16))
 	remoteexecution.RegisterCapabilitiesServer(s, buildQueue)
 	remoteexecution.RegisterExecutionServer(s, buildQueue)
 	grpc_prometheus.EnableHandlingTimeHistogram()

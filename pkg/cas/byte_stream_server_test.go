@@ -1,4 +1,4 @@
-package blobstore_test
+package cas_test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
@@ -89,7 +89,7 @@ func TestExistenceByteStreamServer(t *testing.T) {
 	// Create an RPC server/client pair.
 	l := bufconn.Listen(1 << 20)
 	server := grpc.NewServer()
-	bytestream.RegisterByteStreamServer(server, blobstore.NewByteStreamServer(blobAccess, 10))
+	bytestream.RegisterByteStreamServer(server, cas.NewByteStreamServer(blobAccess, 10))
 	go func() {
 		require.NoError(t, server.Serve(l))
 	}()

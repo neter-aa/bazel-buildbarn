@@ -1,4 +1,4 @@
-package blobstore
+package cas
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 
@@ -71,14 +72,14 @@ func parseResourceNameWrite(resourceName string) (*util.Digest, error) {
 }
 
 type byteStreamServer struct {
-	blobAccess    BlobAccess
+	blobAccess    blobstore.BlobAccess
 	readChunkSize int
 }
 
 // NewByteStreamServer creates a GRPC service for reading blobs from and
 // writing blobs to a BlobAccess. It is used by Bazel to access the
 // Content Addressable Storage (CAS).
-func NewByteStreamServer(blobAccess BlobAccess, readChunkSize int) bytestream.ByteStreamServer {
+func NewByteStreamServer(blobAccess blobstore.BlobAccess, readChunkSize int) bytestream.ByteStreamServer {
 	return &byteStreamServer{
 		blobAccess:    blobAccess,
 		readChunkSize: readChunkSize,
