@@ -24,7 +24,7 @@ CURWD="$(pwd)"
 trap 'kill $(jobs -p)' EXIT TERM INT
 
 # Clean up data from previous run.
-rm -rf build cache runner
+rm -f runner
 mkdir -p build cache storage-ac storage-cas
 
 # Launch frontend, scheduler, storage, browser and worker.
