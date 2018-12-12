@@ -191,7 +191,7 @@ func (d *localDirectory) Remove(name string) error {
 	return err2
 }
 
-func (d *localDirectory) removeAllChildren() error {
+func (d *localDirectory) RemoveAllChildren() error {
 	children, err := d.ReadDir()
 	if err != nil {
 		return err
@@ -206,7 +206,7 @@ func (d *localDirectory) removeAllChildren() error {
 			if err != nil {
 				return err
 			}
-			err = subdirectory.(*localDirectory).removeAllChildren()
+			err = subdirectory.(*localDirectory).RemoveAllChildren()
 			subdirectory.Close()
 			if err != nil {
 				return err
@@ -229,7 +229,7 @@ func (d *localDirectory) RemoveAll(name string) error {
 	// TODO(edsch): Call chmod(700) to ensure directory can be accessed?
 	if subdirectory, err := d.Enter(name); err == nil {
 		// A directory. Remove all children.
-		err := subdirectory.(*localDirectory).removeAllChildren()
+		err := subdirectory.(*localDirectory).RemoveAllChildren()
 		subdirectory.Close()
 		if err != nil {
 			return err

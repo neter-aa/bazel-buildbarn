@@ -34,6 +34,9 @@ type Directory interface {
 	Remove(name string) error
 	// RemoveAll is the equivalent of os.RemoveAll().
 	RemoveAll(name string) error
+	// RemoveAllChildren empties out a directory, without removing
+	// the directory itself.
+	RemoveAllChildren() error
 	// Symlink is the equivalent of os.Symlink().
 	Symlink(oldName string, newName string) error
 }

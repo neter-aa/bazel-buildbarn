@@ -66,6 +66,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to open cache directory: ", err)
 	}
+	if err := cacheDirectory.RemoveAllChildren(); err != nil {
+		log.Fatal("Failed to clear cache directory: ", err)
+	}
 
 	// Cached read access to the Content Addressable Storage. All
 	// workers make use of the same cache, to increase the hit rate.
