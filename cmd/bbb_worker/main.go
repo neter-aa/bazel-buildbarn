@@ -106,11 +106,21 @@ func main() {
 		log.Fatal("Failed to create runner RPC client: ", err)
 	}
 
-	// Create a per-action directory named after the action digest, so that
-	// multiple actions may be run concurrently within the same environment.
-	environmentManager := environment.NewActionDigestSubdirectoryManager(
+	// Build environment capable of executing one action at a time.
+	// The build takes place in the root of the build directory.
+	environmentManager := environment.NewCleanBuildDirectoryManager(
 		environment.NewSingletonManager(
-			environment.NewRemoteExecutionEnvironment(runnerConnection, buildDirectory)),
+			environment.NewRemoteExecutionEnvironment(runnerConnection, buildDirectory)))
+
+	// Create a per-action subdirectory in the build directory named
+	// after the action digest, so that multiple actions may be run
+	// concurrently within the same environment.
+	// TODO(edsch): It might make sense to disable this if
+	// concurrency is disabled to improve action cache hit rate, but
+	// only if there are no other workers in the same cluster that
+	// have concurrency enabled.
+	environmentManager = environment.NewActionDigestSubdirectoryManager(
+		environment.NewConcurrentManager(environmentManager),
 		util.DigestKeyWithoutInstance)
 
 	for i := 0; i < *concurrency; i++ {

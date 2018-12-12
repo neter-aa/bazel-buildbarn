@@ -4,6 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "action_digest_subdirectory_manager.go",
+        "clean_build_directory_manager.go",
+        "concurrent_manager.go",
         "environment.go",
         "local_execution_environment.go",
         "manager.go",
