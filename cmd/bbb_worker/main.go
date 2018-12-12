@@ -27,12 +27,14 @@ import (
 
 func main() {
 	var (
-		browserURLString = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, accessible by the user through 'bazel build --verbose_failures'")
-		blobstoreConfig  = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
-		concurrency      = flag.Int("concurrency", 1, "Number of actions to run concurrently")
-		runnerAddress    = flag.String("runner", "", "Address of the runner to which to connect")
-		schedulerAddress = flag.String("scheduler", "", "Address of the scheduler to which to connect")
-		webListenAddress = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
+		blobstoreConfig    = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
+		browserURLString   = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, accessible by the user through 'bazel build --verbose_failures'")
+		buildDirectoryPath = flag.String("build-directory", "/build", "Directory where builds take place")
+		cacheDirectoryPath = flag.String("cache-directory", "/cache", "Directory where build input files are cached")
+		concurrency        = flag.Int("concurrency", 1, "Number of actions to run concurrently")
+		runnerAddress      = flag.String("runner", "", "Address of the runner to which to connect")
+		schedulerAddress   = flag.String("scheduler", "", "Address of the scheduler to which to connect")
+		webListenAddress   = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Parse()
 
@@ -53,18 +55,16 @@ func main() {
 		log.Fatal("Failed to create blob access: ", err)
 	}
 
-	rootDirectory, err := filesystem.NewLocalDirectory(".")
+	// Directories where builds take place.
+	buildDirectory, err := filesystem.NewLocalDirectory(*buildDirectoryPath)
 	if err != nil {
-		log.Fatal("Failed to open current directory: ", err)
+		log.Fatal("Failed to open cache directory: ", err)
 	}
 
 	// On-disk caching of content for efficient linking into build environments.
-	if err := rootDirectory.Mkdir("cache", 0700); err != nil {
-		log.Fatal("Failed to create cache directory: ", err)
-	}
-	cacheDirectory, err := rootDirectory.Enter("cache")
+	cacheDirectory, err := filesystem.NewLocalDirectory(*cacheDirectoryPath)
 	if err != nil {
-		log.Fatal("Failed to enter cache directory: ", err)
+		log.Fatal("Failed to open cache directory: ", err)
 	}
 
 	// Cached read access to the Content Addressable Storage. All
@@ -107,7 +107,7 @@ func main() {
 	// multiple actions may be run concurrently within the same environment.
 	environmentManager := environment.NewActionDigestSubdirectoryManager(
 		environment.NewSingletonManager(
-			environment.NewRemoteExecutionEnvironment(runnerConnection, rootDirectory)),
+			environment.NewRemoteExecutionEnvironment(runnerConnection, buildDirectory)),
 		util.DigestKeyWithoutInstance)
 
 	for i := 0; i < *concurrency; i++ {

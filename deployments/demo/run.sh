@@ -24,8 +24,8 @@ CURWD="$(pwd)"
 trap 'kill $(jobs -p)' EXIT TERM INT
 
 # Clean up data from previous run.
-rm -rf runner worker
-mkdir -p storage-ac storage-cas worker
+rm -rf build cache runner
+mkdir -p build cache storage-ac storage-cas
 
 # Launch frontend, scheduler, storage, browser and worker.
 "${BBB_SRC}/bazel-bin/cmd/bbb_frontend/${ARCH}/bbb_frontend" \
@@ -41,15 +41,16 @@ mkdir -p storage-ac storage-cas worker
  exec "${BBB_SRC}/bazel-bin/cmd/bbb_browser/${ARCH}/bbb_browser" \
     -blobstore-config "${CURWD}/frontend-worker-blobstore.conf" \
     -web.listen-address localhost:7983) &
-(cd worker &&
- exec "${BBB_SRC}/bazel-bin/cmd/bbb_worker/${ARCH}/bbb_worker" \
+"${BBB_SRC}/bazel-bin/cmd/bbb_worker/${ARCH}/bbb_worker" \
     -blobstore-config "${CURWD}/frontend-worker-blobstore.conf" \
     -browser-url http://localhost:7983/ \
+    -build-directory build \
+    -cache-directory cache \
     -concurrency 4 \
     -runner "unix://${CURWD}/runner" \
     -scheduler localhost:8981 \
-    -web.listen-address localhost:7984) &
-(cd worker &&
+    -web.listen-address localhost:7984 &
+(cd build &&
  exec "${BBB_SRC}/bazel-bin/cmd/bbb_runner/${ARCH}/bbb_runner" \
     -listen-path "${CURWD}/runner") &
 
