@@ -1,18 +1,11 @@
 package environment
 
 import (
-	"sync"
-
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type singletonManager struct {
-	environment Environment
-	lock        sync.Mutex
-	acquired    bool
+	environment chan Environment
 }
 
 // NewSingletonManager is a simple Manager that always returns the same
@@ -20,8 +13,10 @@ type singletonManager struct {
 // NewLocalExecutionEnvironment or NewRemoteExecutionManager to force
 // that all build actions are executed using the same method.
 func NewSingletonManager(environment Environment) Manager {
-	em := &singletonManager{}
-	em.environment = &singletonEnvironment{
+	em := &singletonManager{
+		environment: make(chan Environment, 1),
+	}
+	em.environment <- &singletonEnvironment{
 		Environment: environment,
 		manager:     em,
 	}
@@ -29,13 +24,7 @@ func NewSingletonManager(environment Environment) Manager {
 }
 
 func (em *singletonManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (Environment, error) {
-	em.lock.Lock()
-	defer em.lock.Unlock()
-	if em.acquired {
-		return nil, status.Error(codes.Unavailable, "Environment is already acquired")
-	}
-	em.acquired = true
-	return em.environment, nil
+	return <-em.environment, nil
 }
 
 type singletonEnvironment struct {
@@ -46,7 +35,5 @@ type singletonEnvironment struct {
 func (e *singletonEnvironment) Release() {
 	// Never call Release() on the underlying environment, as it
 	// will be reused.
-	e.manager.lock.Lock()
-	e.manager.acquired = false
-	e.manager.lock.Unlock()
+	e.manager.environment <- e
 }
