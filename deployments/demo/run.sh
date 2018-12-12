@@ -50,8 +50,8 @@ mkdir -p build cache storage-ac storage-cas
     -runner "unix://${CURWD}/runner" \
     -scheduler localhost:8981 \
     -web.listen-address localhost:7984 &
-(cd build &&
- exec "${BBB_SRC}/bazel-bin/cmd/bbb_runner/${ARCH}/bbb_runner" \
-    -listen-path "${CURWD}/runner") &
+"${BBB_SRC}/bazel-bin/cmd/bbb_runner/${ARCH}/bbb_runner" \
+    -build-directory build \
+    -listen-path "${CURWD}/runner" &
 
 wait
