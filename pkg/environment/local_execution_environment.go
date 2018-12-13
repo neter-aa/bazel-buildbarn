@@ -74,21 +74,31 @@ func (e *localExecutionEnvironment) Run(ctx context.Context, request *runner.Run
 		cmd.Env = append(cmd.Env, name+"="+value)
 	}
 
+	// Open output files for logging.
 	stdout, err := e.openLog(request.StdoutPath)
 	if err != nil {
 		return nil, util.StatusWrap(err, "Failed to open stdout")
 	}
-	defer stdout.Close()
 	cmd.Stdout = stdout
 
 	stderr, err := e.openLog(request.StderrPath)
 	if err != nil {
+		stdout.Close()
 		return nil, util.StatusWrap(err, "Failed to open stderr")
 	}
-	defer stderr.Close()
 	cmd.Stderr = stderr
 
-	err = cmd.Run()
+	// Start the subprocess. We can already close the output files
+	// while the process is running.
+	err = cmd.Start()
+	stdout.Close()
+	stderr.Close()
+	if err != nil {
+		return nil, util.StatusWrap(err, "Failed to start process")
+	}
+
+	// Wait for execution to complete.
+	err = cmd.Wait()
 	if exitError, ok := err.(*exec.ExitError); ok {
 		waitStatus := exitError.Sys().(syscall.WaitStatus)
 		return &runner.RunResponse{
