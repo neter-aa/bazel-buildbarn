@@ -32,7 +32,7 @@ func NewActionDigestSubdirectoryManager(base Manager, subdirectoryFormat util.Di
 	}
 }
 
-func (em *actionDigestSubdirectoryManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (Environment, error) {
+func (em *actionDigestSubdirectoryManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (ManagedEnvironment, error) {
 	// Allocate underlying environment.
 	environment, err := em.base.Acquire(actionDigest, platformProperties)
 	if err != nil {
@@ -63,7 +63,7 @@ func (em *actionDigestSubdirectoryManager) Acquire(actionDigest *util.Digest, pl
 }
 
 type actionDigestSubdirectoryEnvironment struct {
-	base             Environment
+	base             ManagedEnvironment
 	subdirectory     filesystem.Directory
 	subdirectoryName string
 }

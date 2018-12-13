@@ -5,7 +5,7 @@ import (
 )
 
 type singletonManager struct {
-	environment chan Environment
+	environment chan ManagedEnvironment
 }
 
 // NewSingletonManager is a simple Manager that always returns the same
@@ -14,7 +14,7 @@ type singletonManager struct {
 // that all build actions are executed using the same method.
 func NewSingletonManager(environment Environment) Manager {
 	em := &singletonManager{
-		environment: make(chan Environment, 1),
+		environment: make(chan ManagedEnvironment, 1),
 	}
 	em.environment <- &singletonEnvironment{
 		Environment: environment,
@@ -23,7 +23,7 @@ func NewSingletonManager(environment Environment) Manager {
 	return em
 }
 
-func (em *singletonManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (Environment, error) {
+func (em *singletonManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (ManagedEnvironment, error) {
 	return <-em.environment, nil
 }
 

@@ -284,7 +284,7 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 		},
 	}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	environment := mock.NewMockEnvironment(ctrl)
+	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(
 		util.MustNewDigest("netbsd", &remoteexecution.Digest{
 			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
@@ -353,7 +353,7 @@ func TestLocalBuildExecutorInputRootNotInStorage(t *testing.T) {
 			SizeBytes: 42,
 		})).Return(nil, status.Error(codes.Internal, "Storage is offline"))
 	environmentManager := mock.NewMockManager(ctrl)
-	environment := mock.NewMockEnvironment(ctrl)
+	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(
 		util.MustNewDigest("netbsd", &remoteexecution.Digest{
 			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
@@ -414,7 +414,7 @@ func TestLocalBuildExecutorOutputDirectoryCreationFailure(t *testing.T) {
 			SizeBytes: 42,
 		})).Return(&remoteexecution.Directory{}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	environment := mock.NewMockEnvironment(ctrl)
+	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(
 		util.MustNewDigest("fedora", &remoteexecution.Digest{
 			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
@@ -487,7 +487,7 @@ func TestLocalBuildExecutorOutputSymlinkReadingFailure(t *testing.T) {
 			SizeBytes: 678,
 		}), nil)
 	environmentManager := mock.NewMockManager(ctrl)
-	environment := mock.NewMockEnvironment(ctrl)
+	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(
 		util.MustNewDigest("nintendo64", &remoteexecution.Digest{
 			Hash:      "5555555555555555555555555555555555555555555555555555555555555555",
@@ -655,7 +655,7 @@ func TestLocalBuildExecutorSuccess(t *testing.T) {
 
 	// Command execution.
 	environmentManager := mock.NewMockManager(ctrl)
-	environment := mock.NewMockEnvironment(ctrl)
+	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(
 		util.MustNewDigest("ubuntu1804", &remoteexecution.Digest{
 			Hash:      "0000000000000000000000000000000000000000000000000000000000000001",

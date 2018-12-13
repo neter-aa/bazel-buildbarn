@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"log"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
@@ -30,8 +29,4 @@ func (e *remoteExecutionEnvironment) GetBuildDirectory() filesystem.Directory {
 
 func (e *remoteExecutionEnvironment) Run(ctx context.Context, request *runner.RunRequest) (*runner.RunResponse, error) {
 	return e.runner.Run(ctx, request)
-}
-
-func (e *remoteExecutionEnvironment) Release() {
-	log.Fatal("Attempted to release unbound environment")
 }

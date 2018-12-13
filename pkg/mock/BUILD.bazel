@@ -44,6 +44,7 @@ gomock(
     out = "environment.go",
     interfaces = [
         "Environment",
+        "ManagedEnvironment",
         "Manager",
     ],
     library = "//pkg/environment:go_default_library",

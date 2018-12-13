@@ -11,7 +11,7 @@ type concurrentManager struct {
 	base        Manager
 	lock        sync.Mutex
 	refcount    uint
-	environment Environment
+	environment ManagedEnvironment
 }
 
 // NewConcurrentManager is an adapter for Manager that causes concurrent
@@ -28,7 +28,7 @@ func NewConcurrentManager(base Manager) Manager {
 	}
 }
 
-func (em *concurrentManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (Environment, error) {
+func (em *concurrentManager) Acquire(actionDigest *util.Digest, platformProperties map[string]string) (ManagedEnvironment, error) {
 	em.lock.Lock()
 	defer em.lock.Unlock()
 	if em.refcount == 0 {
@@ -38,8 +38,8 @@ func (em *concurrentManager) Acquire(actionDigest *util.Digest, platformProperti
 			return nil, err
 		}
 		em.environment = &concurrentEnvironment{
-			Environment: environment,
-			manager:     em,
+			ManagedEnvironment: environment,
+			manager:            em,
 		}
 	}
 	em.refcount++
@@ -47,7 +47,7 @@ func (em *concurrentManager) Acquire(actionDigest *util.Digest, platformProperti
 }
 
 type concurrentEnvironment struct {
-	Environment
+	ManagedEnvironment
 	manager *concurrentManager
 }
 
@@ -60,6 +60,6 @@ func (e *concurrentEnvironment) Release() {
 	e.manager.refcount--
 	if e.manager.refcount == 0 {
 		// Last consumer released. Release the underlying environment.
-		e.Environment.Release()
+		e.ManagedEnvironment.Release()
 	}
 }

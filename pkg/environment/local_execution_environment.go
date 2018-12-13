@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -99,8 +98,4 @@ func (e *localExecutionEnvironment) Run(ctx context.Context, request *runner.Run
 	return &runner.RunResponse{
 		ExitCode: 0,
 	}, err
-}
-
-func (e *localExecutionEnvironment) Release() {
-	log.Fatal("Attempted to release unbound environment")
 }

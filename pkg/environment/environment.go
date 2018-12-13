@@ -18,8 +18,4 @@ type Environment interface {
 	// GetBuildDirectory returns a handle to a directory in which a
 	// BuildExecutor may place the input files of the build step.
 	GetBuildDirectory() filesystem.Directory
-
-	// Release the Environment back to the EnvironmentManager,
-	// causing any input/output files to be discarded.
-	Release()
 }

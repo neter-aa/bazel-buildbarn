@@ -9,5 +9,16 @@ import (
 // executed. This may allow the Manager to, for example, download container
 // images or set up simulators/emulators.
 type Manager interface {
-	Acquire(actionDigest *util.Digest, platform map[string]string) (Environment, error)
+	Acquire(actionDigest *util.Digest, platform map[string]string) (ManagedEnvironment, error)
+}
+
+// ManagedEnvironment is an environment that is owned by a Manager.
+// After use, it must be released, so that resources associated with it
+// (e.g., a running container, a build directory) may be destroyed.
+type ManagedEnvironment interface {
+	Environment
+
+	// Release the Environment back to the EnvironmentManager,
+	// causing any input/output files to be discarded.
+	Release()
 }
