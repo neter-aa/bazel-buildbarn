@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"log"
 	"sync"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -53,6 +54,9 @@ type concurrentEnvironment struct {
 func (e *concurrentEnvironment) Release() {
 	e.manager.lock.Lock()
 	defer e.manager.lock.Unlock()
+	if e.manager.refcount == 0 {
+		log.Fatal("Attempted to release an already released environment")
+	}
 	e.manager.refcount--
 	if e.manager.refcount == 0 {
 		// Last consumer released. Release the underlying environment.
