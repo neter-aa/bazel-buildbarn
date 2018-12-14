@@ -8,6 +8,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
+	"syscall"
 	"time"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
@@ -37,6 +38,12 @@ func main() {
 		webListenAddress   = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)
 	flag.Parse()
+
+	// To ease privilege separation, clear the umask. This process
+	// either writes files into directories that can easily be
+	// closed off, or creates files with the appropriate mode to be
+	// secure.
+	syscall.Umask(0)
 
 	browserURL, err := url.Parse(*browserURLString)
 	if err != nil {
