@@ -26,5 +26,6 @@ container_image(
     base = "//tools/debian8_base",
     entrypoint = ["/bbb_runner"],
     files = [":bbb_runner"],
+    user = "build",
     visibility = ["//visibility:public"],
 )
