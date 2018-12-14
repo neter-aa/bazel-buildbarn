@@ -14,14 +14,14 @@ import (
 
 func main() {
 	var (
-		buildDirectoryPath = flag.String("build-directory", "/build", "Directory where builds take place")
-		listenPath         = flag.String("listen-path", "", "Path on which this process should bind its UNIX socket to wait for incoming requests through GRPC")
+		buildDirectoryPath = flag.String("build-directory", "/worker/build", "Directory where builds take place")
+		listenPath         = flag.String("listen-path", "/worker/runner", "Path on which this process should bind its UNIX socket to wait for incoming requests through GRPC")
 	)
 	flag.Parse()
 
 	buildDirectory, err := filesystem.NewLocalDirectory(*buildDirectoryPath)
 	if err != nil {
-		log.Fatal("Failed to open current directory: ", err)
+		log.Fatal("Failed to open build directory: ", err)
 	}
 
 	s := grpc.NewServer()
