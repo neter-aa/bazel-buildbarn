@@ -29,10 +29,10 @@ func main() {
 	var (
 		blobstoreConfig    = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
 		browserURLString   = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, accessible by the user through 'bazel build --verbose_failures'")
-		buildDirectoryPath = flag.String("build-directory", "/build", "Directory where builds take place")
-		cacheDirectoryPath = flag.String("cache-directory", "/cache", "Directory where build input files are cached")
+		buildDirectoryPath = flag.String("build-directory", "/worker/build", "Directory where builds take place")
+		cacheDirectoryPath = flag.String("cache-directory", "/worker/cache", "Directory where build input files are cached")
 		concurrency        = flag.Int("concurrency", 1, "Number of actions to run concurrently")
-		runnerAddress      = flag.String("runner", "", "Address of the runner to which to connect")
+		runnerAddress      = flag.String("runner", "unix:///worker/runner", "Address of the runner to which to connect")
 		schedulerAddress   = flag.String("scheduler", "", "Address of the scheduler to which to connect")
 		webListenAddress   = flag.String("web.listen-address", ":80", "Port on which to expose metrics")
 	)

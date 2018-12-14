@@ -1,3 +1,4 @@
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
@@ -25,5 +26,12 @@ go_binary(
     name = "bbb_worker",
     embed = [":go_default_library"],
     pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+container_image(
+    name = "bbb_worker_container",
+    entrypoint = ["/bbb_worker"],
+    files = [":bbb_worker"],
     visibility = ["//visibility:public"],
 )
