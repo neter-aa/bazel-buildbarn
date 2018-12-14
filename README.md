@@ -74,7 +74,7 @@ Kubernetes. Only YAML files for Bazel Buildbarn itself are provided.
 Instructions on how to set up dependencies, such as Redis and S3, are
 not included.
 
-The `deployments/demo/` directory contains a shell script that
+The `deployments/bare/` directory contains a shell script that
 demonstrates how Buildbarn can be launched on a single system, without
 using container technology, Kubernetes, etc.
 
