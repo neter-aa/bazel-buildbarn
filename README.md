@@ -74,6 +74,10 @@ Kubernetes. Only YAML files for Bazel Buildbarn itself are provided.
 Instructions on how to set up dependencies, such as Redis and S3, are
 not included.
 
+The `deployments/docker-compose/` directory contains a script that
+invokes Docker Compose to run a simple Bazel Buildbarn setup on your
+system.
+
 The `deployments/bare/` directory contains a shell script that
 demonstrates how Buildbarn can be launched on a single system, without
 using container technology, Kubernetes, etc.

@@ -1,0 +1,53 @@
+version: '3'
+services:
+  bbb-frontend:
+    image: bazel/cmd/bbb_frontend:bbb_frontend_container
+    command:
+    - -scheduler=local|bbb-scheduler:8981
+    ports:
+    - 7980:80
+    - 8980:8980
+    volumes:
+    - ./config-browser-frontend-worker:/config
+
+  bbb-scheduler:
+    image: bazel/cmd/bbb_scheduler:bbb_scheduler_container
+    expose:
+    - 8981
+    ports:
+    - 7981:80
+
+  bbb-storage:
+    image: bazel/cmd/bbb_storage:bbb_storage_container
+    expose:
+    - 8982
+    ports:
+    - 7982:80
+    volumes:
+    - ./config-storage:/config
+    - ./storage-ac:/storage-ac
+    - ./storage-cas:/storage-cas
+
+  bbb-browser:
+    image: bazel/cmd/bbb_browser:bbb_browser_container
+    ports:
+    - 7983:80
+    volumes:
+    - ./config-browser-frontend-worker:/config
+
+  bbb-worker:
+    image: bazel/cmd/bbb_worker:bbb_worker_container
+    command:
+    - -browser-url=http://localhost:7983/
+    - -concurrency=4
+    - -scheduler=bbb-scheduler:8981
+    ports:
+    - 7984:80
+    volumes:
+    - ./config-browser-frontend-worker:/config
+    - ./worker:/worker
+
+  bbb-runner:
+    image: bazel/cmd/bbb_runner:bbb_runner_container
+    volumes:
+    - ./worker:/worker
