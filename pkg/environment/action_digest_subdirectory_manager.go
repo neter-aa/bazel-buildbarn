@@ -8,6 +8,8 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+
+	"google.golang.org/grpc/codes"
 )
 
 type actionDigestSubdirectoryManager struct {
@@ -44,7 +46,7 @@ func (em *actionDigestSubdirectoryManager) Acquire(actionDigest *util.Digest, pl
 	subdirectoryName := actionDigest.GetKey(em.subdirectoryFormat)
 	if err := buildDirectory.Mkdir(subdirectoryName, 0777); err != nil {
 		environment.Release()
-		return nil, err
+		return nil, util.StatusWrapfWithCode(err, codes.Internal, "Failed to create build subdirectory %#v", subdirectoryName)
 	}
 	subdirectory, err := buildDirectory.Enter(subdirectoryName)
 	if err != nil {
@@ -52,7 +54,7 @@ func (em *actionDigestSubdirectoryManager) Acquire(actionDigest *util.Digest, pl
 			log.Print("Failed to remove action digest build directory upon failure to enter: ", err)
 		}
 		environment.Release()
-		return nil, err
+		return nil, util.StatusWrapfWithCode(err, codes.Internal, "Failed to enter build subdirectory %#v", subdirectoryName)
 	}
 
 	return &actionDigestSubdirectoryEnvironment{
