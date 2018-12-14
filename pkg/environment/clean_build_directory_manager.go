@@ -2,6 +2,8 @@ package environment
 
 import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+
+	"google.golang.org/grpc/codes"
 )
 
 type cleanBuildDirectoryManager struct {
@@ -27,7 +29,7 @@ func (em *cleanBuildDirectoryManager) Acquire(actionDigest *util.Digest, platfor
 	// Remove all contents prior to use.
 	if err := environment.GetBuildDirectory().RemoveAllChildren(); err != nil {
 		environment.Release()
-		return nil, util.StatusWrap(err, "Failed to clean build directory prior to build")
+		return nil, util.StatusWrapWithCode(err, codes.Internal, "Failed to clean build directory prior to build")
 	}
 	return environment, nil
 }
