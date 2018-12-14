@@ -12,7 +12,6 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type blobAccessActionCache struct {
@@ -46,7 +45,7 @@ func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *ut
 		} else {
 			log.Printf("Failed to delete corrupted blob %s: %s", digest, err)
 		}
-		return nil, status.Errorf(codes.NotFound, "Failed to unmarshal message: %s", err)
+		return nil, util.StatusWrapWithCode(err, codes.NotFound, "Failed to unmarshal message")
 	}
 	return &actionResult, nil
 }
@@ -54,7 +53,7 @@ func (ac *blobAccessActionCache) GetActionResult(ctx context.Context, digest *ut
 func (ac *blobAccessActionCache) PutActionResult(ctx context.Context, digest *util.Digest, result *remoteexecution.ActionResult) error {
 	data, err := proto.Marshal(result)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Failed to marshal message: %s", err)
+		return util.StatusWrapWithCode(err, codes.InvalidArgument, "Failed to marshal message")
 	}
 	return ac.blobAccess.Put(ctx, digest, int64(len(data)), ioutil.NopCloser(bytes.NewBuffer(data)))
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/go-redis/redis"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type redisBlobAccess struct {
@@ -34,9 +33,9 @@ func (ba *redisBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64,
 	value, err := ba.redisClient.Get(digest.GetKey(ba.blobKeyFormat)).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return 0, nil, status.Errorf(codes.NotFound, err.Error())
+			return 0, nil, util.StatusWrapWithCode(err, codes.NotFound, "Failed to get blob")
 		}
-		return 0, nil, status.Errorf(codes.Unavailable, err.Error())
+		return 0, nil, util.StatusWrapWithCode(err, codes.Unavailable, "Failed to get blob")
 	}
 	return int64(len(value)), ioutil.NopCloser(bytes.NewBuffer(value)), nil
 }
@@ -49,14 +48,14 @@ func (ba *redisBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeByt
 	value, err := ioutil.ReadAll(r)
 	r.Close()
 	if err != nil {
-		return status.Errorf(codes.Unavailable, err.Error())
+		return util.StatusWrapWithCode(err, codes.Unavailable, "Failed to put blob")
 	}
 	return ba.redisClient.Set(digest.GetKey(ba.blobKeyFormat), value, 0).Err()
 }
 
 func (ba *redisBlobAccess) Delete(ctx context.Context, digest *util.Digest) error {
 	if err := ba.redisClient.Del(digest.GetKey(ba.blobKeyFormat)).Err(); err != nil {
-		return status.Errorf(codes.Unavailable, err.Error())
+		return util.StatusWrapWithCode(err, codes.Unavailable, "Failed to delete blob")
 	}
 	return nil
 }
@@ -76,7 +75,7 @@ func (ba *redisBlobAccess) FindMissing(ctx context.Context, digests []*util.Dige
 		cmds = append(cmds, pipeline.Exists(digest.GetKey(ba.blobKeyFormat)))
 	}
 	if _, err := pipeline.Exec(); err != nil {
-		return nil, status.Errorf(codes.Unavailable, err.Error())
+		return nil, util.StatusWrapWithCode(err, codes.Unavailable, "Failed to find missing blobs")
 	}
 
 	var missing []*util.Digest
