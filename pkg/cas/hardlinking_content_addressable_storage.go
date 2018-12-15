@@ -19,6 +19,8 @@ var (
 			Help:      "Total number of operations against the hardlinking content addressable storage.",
 		},
 		[]string{"result"})
+	hardlinkingContentAddressableStorageOperationsTotalHit  = hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Hit")
+	hardlinkingContentAddressableStorageOperationsTotalMiss = hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Miss")
 )
 
 func init() {
@@ -91,11 +93,11 @@ func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, di
 	if _, ok := cas.filesPresentSize[key]; ok {
 		err := cas.cacheDirectory.Link(key, directory, name)
 		cas.lock.Unlock()
-		hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Hit").Inc()
+		hardlinkingContentAddressableStorageOperationsTotalHit.Inc()
 		return err
 	}
 	cas.lock.Unlock()
-	hardlinkingContentAddressableStorageOperationsTotal.WithLabelValues("Miss").Inc()
+	hardlinkingContentAddressableStorageOperationsTotalMiss.Inc()
 
 	// Download the file at the intended location.
 	if err := cas.ContentAddressableStorage.GetFile(ctx, digest, directory, name, isExecutable); err != nil {

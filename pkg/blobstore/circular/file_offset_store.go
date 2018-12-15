@@ -35,6 +35,13 @@ var (
 			Buckets:   prometheus.LinearBuckets(1.0, 1.0, maximumIterations),
 		},
 		[]string{"operation", "result"})
+	operationsIterationsGetTooManyIterations = operationsIterations.WithLabelValues("Get", "TooManyIterations")
+	operationsIterationsGetError             = operationsIterations.WithLabelValues("Get", "Error")
+	operationsIterationsGetNotFound          = operationsIterations.WithLabelValues("Get", "NotFound")
+	operationsIterationsGetSuccess           = operationsIterations.WithLabelValues("Get", "Success")
+	operationsIterationsPutTooManyIterations = operationsIterations.WithLabelValues("Put", "TooManyIterations")
+	operationsIterationsPutError             = operationsIterations.WithLabelValues("Put", "Error")
+	operationsIterationsPutSuccess           = operationsIterations.WithLabelValues("Put", "Success")
 )
 
 func init() {
@@ -142,7 +149,7 @@ func (os *fileOffsetStore) Get(digest *util.Digest, cursors Cursors) (uint64, in
 	record := newOffsetRecord(newSimpleDigest(digest), 0, 0)
 	for iteration := uint32(1); ; iteration++ {
 		if iteration >= maximumIterations {
-			operationsIterations.WithLabelValues("Get", "TooManyIterations").Observe(float64(iteration))
+			operationsIterationsGetTooManyIterations.Observe(float64(iteration))
 			return 0, 0, false, nil
 		}
 
@@ -150,19 +157,19 @@ func (os *fileOffsetStore) Get(digest *util.Digest, cursors Cursors) (uint64, in
 		position := os.getPositionOfSlot(lookupRecord.getSlot())
 		storedRecord, err := os.getRecordAtPosition(position)
 		if err != nil {
-			operationsIterations.WithLabelValues("Get", "Error").Observe(float64(iteration))
+			operationsIterationsGetError.Observe(float64(iteration))
 			return 0, 0, false, err
 		}
 		if !cursors.Contains(storedRecord.getOffset(), storedRecord.getLength()) {
-			operationsIterations.WithLabelValues("Get", "NotFound").Observe(float64(iteration))
+			operationsIterationsGetNotFound.Observe(float64(iteration))
 			return 0, 0, false, nil
 		}
 		if storedRecord.digestAndAttemptEqual(lookupRecord) {
-			operationsIterations.WithLabelValues("Get", "Success").Observe(float64(iteration))
+			operationsIterationsGetSuccess.Observe(float64(iteration))
 			return storedRecord.getOffset(), storedRecord.getLength(), true, nil
 		}
 		if os.getPositionOfSlot(storedRecord.getSlot()) != position {
-			operationsIterations.WithLabelValues("Get", "NotFound").Observe(float64(iteration))
+			operationsIterationsGetNotFound.Observe(float64(iteration))
 			return 0, 0, false, nil
 		}
 	}
@@ -207,17 +214,17 @@ func (os *fileOffsetStore) Put(digest *util.Digest, offset uint64, length int64,
 	record := newOffsetRecord(newSimpleDigest(digest), offset, length)
 	for iteration := 1; ; iteration++ {
 		if iteration > maximumIterations {
-			operationsIterations.WithLabelValues("Put", "TooManyIterations").Observe(float64(iteration))
+			operationsIterationsPutTooManyIterations.Observe(float64(iteration))
 			return nil
 		}
 
 		if nextRecord, more, err := os.putRecord(record, cursors); err != nil {
-			operationsIterations.WithLabelValues("Put", "Error").Observe(float64(iteration))
+			operationsIterationsPutError.Observe(float64(iteration))
 			return err
 		} else if more {
 			record = nextRecord
 		} else {
-			operationsIterations.WithLabelValues("Put", "Success").Observe(float64(iteration))
+			operationsIterationsPutSuccess.Observe(float64(iteration))
 			return nil
 		}
 	}

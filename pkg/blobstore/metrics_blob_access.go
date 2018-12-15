@@ -36,47 +36,61 @@ func init() {
 }
 
 type metricsBlobAccess struct {
-	blobAccess BlobAccess
-	name       string
+	blobAccess                                     BlobAccess
+	blobAccessOperationsStartedTotalGet            prometheus.Counter
+	blobAccessOperationsDurationSecondsGet         prometheus.Histogram
+	blobAccessOperationsStartedTotalPut            prometheus.Counter
+	blobAccessOperationsDurationSecondsPut         prometheus.Histogram
+	blobAccessOperationsStartedTotalDelete         prometheus.Counter
+	blobAccessOperationsDurationSecondsDelete      prometheus.Histogram
+	blobAccessOperationsStartedTotalFindMissing    prometheus.Counter
+	blobAccessOperationsDurationSecondsFindMissing prometheus.Histogram
 }
 
 // NewMetricsBlobAccess creates an adapter for BlobAccess that adds
 // basic instrumentation in the form of Prometheus metrics.
 func NewMetricsBlobAccess(blobAccess BlobAccess, name string) BlobAccess {
 	return &metricsBlobAccess{
-		blobAccess: blobAccess,
-		name:       name,
+		blobAccess:                                     blobAccess,
+		blobAccessOperationsStartedTotalGet:            blobAccessOperationsStartedTotal.WithLabelValues(name, "Get"),
+		blobAccessOperationsDurationSecondsGet:         blobAccessOperationsDurationSeconds.WithLabelValues(name, "Get"),
+		blobAccessOperationsStartedTotalPut:            blobAccessOperationsStartedTotal.WithLabelValues(name, "Put"),
+		blobAccessOperationsDurationSecondsPut:         blobAccessOperationsDurationSeconds.WithLabelValues(name, "Put"),
+		blobAccessOperationsStartedTotalDelete:         blobAccessOperationsStartedTotal.WithLabelValues(name, "Delete"),
+		blobAccessOperationsDurationSecondsDelete:      blobAccessOperationsDurationSeconds.WithLabelValues(name, "Delete"),
+		blobAccessOperationsStartedTotalFindMissing:    blobAccessOperationsStartedTotal.WithLabelValues(name, "FindMissing"),
+		blobAccessOperationsDurationSecondsFindMissing: blobAccessOperationsDurationSeconds.WithLabelValues(name, "FindMissing"),
 	}
 }
 
 func (ba *metricsBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
-	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Get").Inc()
+	ba.blobAccessOperationsStartedTotalGet.Inc()
 	timeStart := time.Now()
 	length, r, err := ba.blobAccess.Get(ctx, digest)
-	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Get").Observe(time.Now().Sub(timeStart).Seconds())
+	ba.blobAccessOperationsDurationSecondsGet.Observe(time.Now().Sub(timeStart).Seconds())
 	return length, r, err
 }
 
 func (ba *metricsBlobAccess) Put(ctx context.Context, digest *util.Digest, sizeBytes int64, r io.ReadCloser) error {
-	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Put").Inc()
+	ba.blobAccessOperationsStartedTotalPut.Inc()
 	timeStart := time.Now()
 	err := ba.blobAccess.Put(ctx, digest, sizeBytes, r)
-	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Put").Observe(time.Now().Sub(timeStart).Seconds())
+	ba.blobAccessOperationsDurationSecondsPut.Observe(time.Now().Sub(timeStart).Seconds())
 	return err
 }
 
 func (ba *metricsBlobAccess) Delete(ctx context.Context, digest *util.Digest) error {
-	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "Delete").Inc()
+	ba.blobAccessOperationsStartedTotalDelete.Inc()
 	timeStart := time.Now()
 	err := ba.blobAccess.Delete(ctx, digest)
-	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "Delete").Observe(time.Now().Sub(timeStart).Seconds())
+	ba.blobAccessOperationsDurationSecondsDelete.Observe(time.Now().Sub(timeStart).Seconds())
 	return err
 }
 
 func (ba *metricsBlobAccess) FindMissing(ctx context.Context, digests []*util.Digest) ([]*util.Digest, error) {
-	blobAccessOperationsStartedTotal.WithLabelValues(ba.name, "FindMissing").Inc()
+	ba.blobAccessOperationsStartedTotalFindMissing.Inc()
 	timeStart := time.Now()
 	digests, err := ba.blobAccess.FindMissing(ctx, digests)
-	blobAccessOperationsDurationSeconds.WithLabelValues(ba.name, "FindMissing").Observe(time.Now().Sub(timeStart).Seconds())
+	ba.blobAccessOperationsDurationSecondsFindMissing.Observe(time.Now().Sub(timeStart).Seconds())
 	return digests, err
 }

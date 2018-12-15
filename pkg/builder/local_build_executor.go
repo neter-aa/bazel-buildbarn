@@ -31,6 +31,10 @@ var (
 			Buckets:   prometheus.ExponentialBuckets(0.001, math.Pow(10.0, 1.0/3.0), 6*3+1),
 		},
 		[]string{"step"})
+	localBuildExecutorDurationSecondsPrepareFilesystem = localBuildExecutorDurationSeconds.WithLabelValues("PrepareFilesystem")
+	localBuildExecutorDurationSecondsGetActionCommand  = localBuildExecutorDurationSeconds.WithLabelValues("GetActionCommand")
+	localBuildExecutorDurationSecondsRunCommand        = localBuildExecutorDurationSeconds.WithLabelValues("RunCommand")
+	localBuildExecutorDurationSecondsUploadOutput      = localBuildExecutorDurationSeconds.WithLabelValues("UploadOutput")
 )
 
 func init() {
@@ -227,7 +231,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		return convertErrorToExecuteResponse(util.StatusWrap(err, "Failed to obtain command")), false
 	}
 	timeAfterGetActionCommand := time.Now()
-	localBuildExecutorDurationSeconds.WithLabelValues("get_action_command").Observe(
+	localBuildExecutorDurationSecondsGetActionCommand.Observe(
 		timeAfterGetActionCommand.Sub(timeStart).Seconds())
 
 	// Obtain build environment.
@@ -281,7 +285,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	}
 
 	timeAfterPrepareFilesytem := time.Now()
-	localBuildExecutorDurationSeconds.WithLabelValues("prepare_filesystem").Observe(
+	localBuildExecutorDurationSecondsPrepareFilesystem.Observe(
 		timeAfterPrepareFilesytem.Sub(timeAfterGetActionCommand).Seconds())
 
 	// Invoke command.
@@ -300,7 +304,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 		return convertErrorToExecuteResponse(err), false
 	}
 	timeAfterRunCommand := time.Now()
-	localBuildExecutorDurationSeconds.WithLabelValues("run_command").Observe(
+	localBuildExecutorDurationSecondsRunCommand.Observe(
 		timeAfterRunCommand.Sub(timeAfterPrepareFilesytem).Seconds())
 
 	response := &remoteexecution.ExecuteResponse{
@@ -406,7 +410,7 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	}
 
 	timeAfterUpload := time.Now()
-	localBuildExecutorDurationSeconds.WithLabelValues("upload_output").Observe(
+	localBuildExecutorDurationSecondsUploadOutput.Observe(
 		timeAfterUpload.Sub(timeAfterRunCommand).Seconds())
 
 	return response, !action.DoNotCache && response.Result.ExitCode == 0
