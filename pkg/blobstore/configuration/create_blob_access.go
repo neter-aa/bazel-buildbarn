@@ -113,15 +113,18 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 				return offsetStore, nil
 			})
 		}
-
-		implementation, err = circular.NewCircularBlobAccess(
-			offsetStore,
-			circular.NewFileDataStore(dataFile, backend.Circular.DataFileSizeBytes),
-			backend.Circular.DataFileSizeBytes,
-			circular.NewFileStateStore(stateFile))
+		stateStore, err := circular.NewFileStateStore(stateFile, backend.Circular.DataFileSizeBytes)
 		if err != nil {
 			return nil, err
 		}
+
+		implementation = circular.NewCircularBlobAccess(
+			offsetStore,
+			circular.NewFileDataStore(dataFile, backend.Circular.DataFileSizeBytes),
+			circular.NewPositiveSizedBlobStateStore(
+				circular.NewBulkAllocatingStateStore(
+					stateStore,
+					backend.Circular.DataAllocationChunkSizeBytes)))
 	case *pb.BlobAccessConfiguration_Error:
 		backendType = "failing"
 		implementation = blobstore.NewErrorBlobAccess(status.ErrorProto(backend.Error))

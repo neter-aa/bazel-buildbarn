@@ -60,6 +60,12 @@ message CircularBlobAccessConfiguration {
     // stored together. For the Action Cache, this field is required, as
     // every instance needs its own offset file and cache.
     repeated string instance = 5;
+
+    // Amount of space to allocate in the data file at once. Setting
+    // this value too low may cause an excessive number of writes to the
+    // state file. Setting this value too high may cause excessive
+    // amounts of old data to be invalidated upon process restart.
+    uint64 data_allocation_chunk_size_bytes = 6;
 }
 
 message GRPCBlobAccessConfiguration {

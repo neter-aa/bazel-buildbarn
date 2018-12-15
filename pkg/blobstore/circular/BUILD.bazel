@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "bulk_allocating_state_store.go",
         "caching_offset_store.go",
         "circular_blob_access.go",
         "cursors.go",
@@ -10,6 +11,7 @@ go_library(
         "file_data_store.go",
         "file_offset_store.go",
         "file_state_store.go",
+        "positive_sized_blob_state_store.go",
         "read_writer_at.go",
         "simple_digest.go",
     ],

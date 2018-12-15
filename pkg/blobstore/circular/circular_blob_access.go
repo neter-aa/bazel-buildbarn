@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"sync"
-	"time"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -34,18 +32,17 @@ type DataStore interface {
 // is stored, namely the read/write cursors where data is currently
 // being stored in the data file.
 type StateStore interface {
-	Get() (Cursors, error)
-	Put(cursors Cursors) error
+	GetCursors() Cursors
+	Allocate(sizeBytes int64) (uint64, error)
+	Invalidate(offset uint64, sizeBytes int64) error
 }
 
 type circularBlobAccess struct {
 	// Fields that are constant or lockless.
 	dataStore DataStore
-	dataSize  uint64
 
 	// Fields protected by the lock.
 	lock        sync.Mutex
-	cursors     Cursors
 	offsetStore OffsetStore
 	stateStore  StateStore
 }
@@ -53,43 +50,18 @@ type circularBlobAccess struct {
 // NewCircularBlobAccess creates a new circular storage backend. Instead
 // of writing data to storage directly, all three storage files are
 // injected through separate interfaces.
-func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, dataSize uint64, stateStore StateStore) (blobstore.BlobAccess, error) {
-	cursors, err := stateStore.Get()
-	if err != nil {
-		return nil, err
-	}
-
-	ba := &circularBlobAccess{
+func NewCircularBlobAccess(offsetStore OffsetStore, dataStore DataStore, stateStore StateStore) blobstore.BlobAccess {
+	return &circularBlobAccess{
 		offsetStore: offsetStore,
 		dataStore:   dataStore,
-		dataSize:    dataSize,
 		stateStore:  stateStore,
-		cursors:     cursors,
-	}
-	go ba.flushStateStore()
-	return ba, nil
-}
-
-// TODO(edsch): Move this out of circularBlobAccess into an adapter for
-// StateStore. Also improve the logic, so that we allocate regions of
-// data ahead of time to prevent spurious data corruption.
-func (ba *circularBlobAccess) flushStateStore() {
-	for {
-		time.Sleep(time.Minute)
-
-		ba.lock.Lock()
-		cursors := ba.cursors
-		ba.lock.Unlock()
-
-		if err := ba.stateStore.Put(cursors); err != nil {
-			log.Print("Failed to write to state store: ", err)
-		}
 	}
 }
 
 func (ba *circularBlobAccess) Get(ctx context.Context, digest *util.Digest) (int64, io.ReadCloser, error) {
 	ba.lock.Lock()
-	offset, length, ok, err := ba.offsetStore.Get(digest, ba.cursors)
+	cursors := ba.stateStore.GetCursors()
+	offset, length, ok, err := ba.offsetStore.Get(digest, cursors)
 	ba.lock.Unlock()
 	if err != nil {
 		return 0, nil, err
@@ -104,18 +76,21 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 
 	// Allocate space in the data store.
 	ba.lock.Lock()
-	offset := ba.cursors.Allocate(sizeBytes, ba.dataSize)
+	offset, err := ba.stateStore.Allocate(sizeBytes)
 	ba.lock.Unlock()
+	if err != nil {
+		return err
+	}
 
 	// Write the data to storage.
 	if err := ba.dataStore.Put(r, offset); err != nil {
 		return err
 	}
 
-	var err error
 	ba.lock.Lock()
-	if ba.cursors.Contains(offset, sizeBytes) {
-		err = ba.offsetStore.Put(digest, offset, sizeBytes, ba.cursors)
+	cursors := ba.stateStore.GetCursors()
+	if cursors.Contains(offset, sizeBytes) {
+		err = ba.offsetStore.Put(digest, offset, sizeBytes, cursors)
 	} else {
 		err = errors.New("Data became stale before write completed")
 	}
@@ -127,10 +102,11 @@ func (ba *circularBlobAccess) Delete(ctx context.Context, digest *util.Digest) e
 	ba.lock.Lock()
 	defer ba.lock.Unlock()
 
-	if offset, length, ok, err := ba.offsetStore.Get(digest, ba.cursors); err != nil {
+	cursors := ba.stateStore.GetCursors()
+	if offset, length, ok, err := ba.offsetStore.Get(digest, cursors); err != nil {
 		return err
 	} else if ok {
-		ba.cursors.Invalidate(offset, length)
+		return ba.stateStore.Invalidate(offset, length)
 	}
 	return nil
 }
@@ -139,9 +115,10 @@ func (ba *circularBlobAccess) FindMissing(ctx context.Context, digests []*util.D
 	ba.lock.Lock()
 	defer ba.lock.Unlock()
 
+	cursors := ba.stateStore.GetCursors()
 	var missingDigests []*util.Digest
 	for _, digest := range digests {
-		if _, _, ok, err := ba.offsetStore.Get(digest, ba.cursors); err != nil {
+		if _, _, ok, err := ba.offsetStore.Get(digest, cursors); err != nil {
 			return nil, err
 		} else if !ok {
 			missingDigests = append(missingDigests, digest)
