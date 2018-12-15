@@ -121,7 +121,6 @@ func (ba *circularBlobAccess) Put(ctx context.Context, digest *util.Digest, size
 	}
 	ba.lock.Unlock()
 	return err
-
 }
 
 func (ba *circularBlobAccess) Delete(ctx context.Context, digest *util.Digest) error {
