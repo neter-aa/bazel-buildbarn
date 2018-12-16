@@ -61,7 +61,9 @@ container images for the individual components:
 
     //cmd/bbb_browser:bbb_browser_container
     //cmd/bbb_frontend:bbb_frontend_container
+    //cmd/bbb_runner:bbb_runner_container
     //cmd/bbb_scheduler:bbb_scheduler_container
+    //cmd/bbb_storage:bbb_storage_container
     //cmd/bbb_worker:bbb_worker_container
 
 You can add this repository to an existing workspace and use
