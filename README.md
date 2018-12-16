@@ -114,7 +114,7 @@ placing the following in `.bazelrc`:
     build:bbb-debian8 --strategy=Javac=remote
 
 In the configuration above, we assume that the container image for the
-worker based on Debian 8 is used. For this image, we depend on a compiler
+runner based on Debian 8 is used. For this image, we depend on a compiler
 configuration for Debian 8 that is stored in
 [the Bazel Toolchains repository](https://github.com/bazelbuild/bazel-toolchains),
 meaning that you will need to add the following to your `WORKSPACE` file
