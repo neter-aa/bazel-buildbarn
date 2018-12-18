@@ -38,6 +38,10 @@ message BlobAccessConfiguration {
 
         // Always fail with a fixed error response.
         google.rpc.Status error = 8;
+
+        // Fan out requests across multiple storage backends to spread
+        // out load.
+        ShardingBlobAccessConfiguration sharding = 9;
     }
 }
 
@@ -107,6 +111,42 @@ message S3BlobAccessConfiguration {
 
     // Prefix for keys, e.g. 'bazel_cas/'.
     string key_prefix = 7;
+}
+
+message ShardingBlobAccessConfiguration {
+    message Shard {
+        // Storage backend that is used by this shard. Omitting this
+        // causes the implementation to assume this shard is drained.
+        // Requests to this shard will be spread out across the other
+        // shards.
+        BlobAccessConfiguration backend = 1;
+
+        // Non-zero ratio of how many keys are allocated to this shard.
+        // When all shards have equal specifications (i.e., capacity and
+        // bandwidth), every shard may have a weight of one.
+        //
+        // For the backend selection algorithm to run quickly, it is not
+        // not advised to let the total weight of drained backends
+        // strongly exceed the total weight of undrained ones.
+        uint32 weight = 2;
+    }
+
+    // Initialization for the hashing algorithm used to partition the
+    // key space. This should be a random 64-bit value that is unique to
+    // this deployment. Failure to do so may result in poor distribution
+    // in case sharding is nested.
+    //
+    // Changing this value will in effect cause a full repartitioning of
+    // the data.
+    uint64 hash_initialization = 1;
+
+    // Shards to which requests are routed. To reduce the need for full
+    // repartitioning of the data when growing a cluster, it's possible
+    // to terminate this list with a drained backend that increases the
+    // total weight up to a given number. Newly added backends may
+    // allocate their weight from this backend, thereby causing most of
+    // the keyspace to still be routed to its original backend.
+    repeated Shard shard = 2;
 }
 
 message SizeDistinguishingeBlobAccessConfiguration {

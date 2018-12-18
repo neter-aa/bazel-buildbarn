@@ -181,6 +181,34 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 			&backend.S3.Bucket,
 			backend.S3.KeyPrefix,
 			digestKeyFormat)
+	case *pb.BlobAccessConfiguration_Sharding:
+		backendType = "sharding"
+		var backends []blobstore.BlobAccess
+		var weights []uint32
+		hasUndrainedBackend := false
+		for _, shard := range backend.Sharding.Shard {
+			if shard.Backend == nil {
+				// Drained backend.
+				backends = append(backends, nil)
+			} else {
+				// Undrained backend.
+				backend, err := createBlobAccess(shard.Backend, storageType, digestKeyFormat)
+				if err != nil {
+					return nil, err
+				}
+				backends = append(backends, backend)
+				hasUndrainedBackend = true
+			}
+
+			if shard.Weight == 0 {
+				return nil, status.Errorf(codes.InvalidArgument, "Shards must have positive weights")
+			}
+			weights = append(weights, shard.Weight)
+		}
+		if !hasUndrainedBackend {
+			return nil, status.Errorf(codes.InvalidArgument, "Cannot create sharding blob access without any undrained backends")
+		}
+		implementation = blobstore.NewShardingBlobAccess(backends, weights, digestKeyFormat, backend.Sharding.HashInitialization)
 	case *pb.BlobAccessConfiguration_SizeDistinguishing:
 		backendType = "size_distinguishing"
 		small, err := createBlobAccess(backend.SizeDistinguishing.Small, storageType, digestKeyFormat)

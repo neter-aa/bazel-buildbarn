@@ -17,7 +17,7 @@ services:
     ports:
     - 7981:80
 
-  bbb-storage:
+  bbb-storage-0:
     image: bazel/cmd/bbb_storage:bbb_storage_container
     expose:
     - 8982
@@ -25,8 +25,18 @@ services:
     - 7982:80
     volumes:
     - ./config-storage:/config
-    - ./storage-ac:/storage-ac
-    - ./storage-cas:/storage-cas
+    - ./storage-ac-0:/storage-ac
+    - ./storage-cas-0:/storage-cas
+  bbb-storage-1:
+    image: bazel/cmd/bbb_storage:bbb_storage_container
+    expose:
+    - 8982
+    ports:
+    - 17982:80
+    volumes:
+    - ./config-storage:/config
+    - ./storage-ac-1:/storage-ac
+    - ./storage-cas-1:/storage-cas
 
   bbb-browser:
     image: bazel/cmd/bbb_browser:bbb_browser_container
