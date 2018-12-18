@@ -8,6 +8,7 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/circular"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/sharding"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	pb "github.com/EdSchouten/bazel-buildbarn/pkg/proto/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
@@ -208,7 +209,11 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		if !hasUndrainedBackend {
 			return nil, status.Errorf(codes.InvalidArgument, "Cannot create sharding blob access without any undrained backends")
 		}
-		implementation = blobstore.NewShardingBlobAccess(backends, weights, digestKeyFormat, backend.Sharding.HashInitialization)
+		implementation = sharding.NewShardingBlobAccess(
+			backends,
+			sharding.NewWeightedShardSelector(weights),
+			digestKeyFormat,
+			backend.Sharding.HashInitialization)
 	case *pb.BlobAccessConfiguration_SizeDistinguishing:
 		backendType = "size_distinguishing"
 		small, err := createBlobAccess(backend.SizeDistinguishing.Small, storageType, digestKeyFormat)

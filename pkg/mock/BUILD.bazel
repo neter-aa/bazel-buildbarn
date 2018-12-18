@@ -73,6 +73,17 @@ gomock(
     package = "mock",
 )
 
+gomock(
+    name = "sharding",
+    out = "sharding.go",
+    interfaces = [
+        "ShardProposer",
+        "ShardSelector",
+    ],
+    library = "//pkg/blobstore/sharding:go_default_library",
+    package = "mock",
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -83,10 +94,12 @@ go_library(
         ":environment.go",
         ":filesystem.go",
         ":remoteexecution.go",
+        ":sharding.go",
     ],
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/blobstore/sharding:go_default_library",
         "//pkg/builder:go_default_library",
         "//pkg/environment:go_default_library",
         "//pkg/filesystem:go_default_library",
