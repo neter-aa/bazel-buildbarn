@@ -3,7 +3,6 @@ package blobstore
 import (
 	"context"
 	"io"
-	"sort"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 )
@@ -13,6 +12,46 @@ type shardingBlobAccess struct {
 	cumulativeWeights  []uint64
 	digestKeyFormat    util.DigestKeyFormat
 	hashInitialization uint64
+}
+
+// convertListToTree converts a list of backends and weights to a
+// perfectly balanced binary search tree. The binary search tree is
+// stored in an array, just like how a binary heap can be stored in an
+// array. Elements are stored in the tree in the same order in which
+// they are stored in the original list. Weights are accumulated, so
+// that binary searching may be used to obtain the backend for a hashed
+// digest.
+func convertListToTree(backends []BlobAccess, weights []uint32, backendsTree []BlobAccess, cumulativeWeights []uint64, treeIndex int) {
+	if len(backends) > 0 {
+		// Determine which element in the list has to be the
+		// root in the tree.
+		completeTreeSizePlusOne := 2
+		for completeTreeSizePlusOne < len(backends)+1 {
+			completeTreeSizePlusOne *= 2
+		}
+		var pivot int
+		if len(backends) >= 3*completeTreeSizePlusOne/4 {
+			pivot = completeTreeSizePlusOne/2 - 1
+		} else {
+			pivot = len(backends) - completeTreeSizePlusOne/4
+		}
+
+		// Create left and right subtrees.
+		leftIndex := treeIndex*2 + 1
+		convertListToTree(backends[:pivot], weights[:pivot], backendsTree, cumulativeWeights, leftIndex)
+		rightIndex := leftIndex + 1
+		convertListToTree(backends[pivot+1:], weights[pivot+1:], backendsTree, cumulativeWeights, rightIndex)
+
+		// Create root and accumulate weights.
+		backendsTree[treeIndex] = backends[pivot]
+		cumulativeWeights[treeIndex] = uint64(weights[pivot])
+		if leftIndex < len(cumulativeWeights) {
+			cumulativeWeights[treeIndex] += cumulativeWeights[leftIndex]
+		}
+		if rightIndex < len(cumulativeWeights) {
+			cumulativeWeights[treeIndex] += cumulativeWeights[rightIndex]
+		}
+	}
 }
 
 // NewShardingBlobAccess is an adapter for BlobAccess that partitions
@@ -25,16 +64,12 @@ type shardingBlobAccess struct {
 // cause keys to be redistributed that would normally end up at other
 // backends.
 func NewShardingBlobAccess(backends []BlobAccess, weights []uint32, digestKeyFormat util.DigestKeyFormat, hashInitialization uint64) BlobAccess {
-	// Compute cumulative weights for binary searching.
-	var cumulativeWeights []uint64
-	totalWeight := uint64(0)
-	for _, weight := range weights {
-		totalWeight += uint64(weight)
-		cumulativeWeights = append(cumulativeWeights, totalWeight)
-	}
+	backendsTree := make([]BlobAccess, len(weights))
+	cumulativeWeights := make([]uint64, len(weights))
+	convertListToTree(backends, weights, backendsTree, cumulativeWeights, 0)
 
 	return &shardingBlobAccess{
-		backends:           backends,
+		backends:           backendsTree,
 		cumulativeWeights:  cumulativeWeights,
 		digestKeyFormat:    digestKeyFormat,
 		hashInitialization: hashInitialization,
@@ -53,19 +88,43 @@ func (ba *shardingBlobAccess) getBackend(digest *util.Digest) BlobAccess {
 	copy(cumulativeWeights, ba.cumulativeWeights)
 	for {
 		// Perform binary search to find corresponding backend.
-		slot := h % cumulativeWeights[len(cumulativeWeights)-1]
-		idx := sort.Search(len(cumulativeWeights), func(i int) bool {
-			return slot < cumulativeWeights[i]
-		})
-		if backend := ba.backends[idx]; backend != nil {
+		slot := h % cumulativeWeights[0]
+		index := 0
+		for {
+			indexLeft := index*2 + 1
+			if indexLeft >= len(cumulativeWeights) {
+				break
+			}
+			weightLeft := cumulativeWeights[indexLeft]
+			if slot < weightLeft {
+				index = indexLeft
+			} else {
+				indexRight := indexLeft + 1
+				if indexRight >= len(cumulativeWeights) {
+					break
+				}
+				weightLeftMiddle := cumulativeWeights[index] - cumulativeWeights[indexRight]
+				if slot < weightLeftMiddle {
+					break
+				}
+				index = indexRight
+				slot -= weightLeftMiddle
+			}
+		}
+
+		if backend := ba.backends[index]; backend != nil {
 			return backend
 		}
 
 		// Ended up at a drained backend. Remove this slot from the
-		// table and retry. Repeating this loop will cause another
+		// tree and retry. Repeating this loop will cause another
 		// slot to be computed without fully rehashing the key.
-		for i := idx; i < len(cumulativeWeights); i++ {
-			cumulativeWeights[i]--
+		for {
+			cumulativeWeights[index]--
+			if index == 0 {
+				break
+			}
+			index = (index - 1) / 2
 		}
 	}
 }
