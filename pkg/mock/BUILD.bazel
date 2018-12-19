@@ -77,7 +77,7 @@ gomock(
     name = "sharding",
     out = "sharding.go",
     interfaces = [
-        "ShardProposer",
+        "ShardPermuter",
         "ShardSelector",
     ],
     library = "//pkg/blobstore/sharding:go_default_library",

@@ -211,7 +211,7 @@ func createBlobAccess(config *pb.BlobAccessConfiguration, storageType string, di
 		}
 		implementation = sharding.NewShardingBlobAccess(
 			backends,
-			sharding.NewWeightedShardSelector(weights),
+			sharding.NewWeightedShardPermuter(weights),
 			digestKeyFormat,
 			backend.Sharding.HashInitialization)
 	case *pb.BlobAccessConfiguration_SizeDistinguishing:

@@ -10,18 +10,18 @@ import (
 
 type shardingBlobAccess struct {
 	backends           []blobstore.BlobAccess
-	shardSelector      ShardSelector
+	shardPermuter      ShardPermuter
 	digestKeyFormat    util.DigestKeyFormat
 	hashInitialization uint64
 }
 
 // NewShardingBlobAccess is an adapter for BlobAccess that partitions
-// requests across backends by hashing the digest. A ShardSelector is
+// requests across backends by hashing the digest. A ShardPermuter is
 // used to map hashes to backends.
-func NewShardingBlobAccess(backends []blobstore.BlobAccess, shardSelector ShardSelector, digestKeyFormat util.DigestKeyFormat, hashInitialization uint64) blobstore.BlobAccess {
+func NewShardingBlobAccess(backends []blobstore.BlobAccess, shardPermuter ShardPermuter, digestKeyFormat util.DigestKeyFormat, hashInitialization uint64) blobstore.BlobAccess {
 	return &shardingBlobAccess{
 		backends:           backends,
-		shardSelector:      shardSelector,
+		shardPermuter:      shardPermuter,
 		digestKeyFormat:    digestKeyFormat,
 		hashInitialization: hashInitialization,
 	}
@@ -37,7 +37,7 @@ func (ba *shardingBlobAccess) getBackend(digest *util.Digest) blobstore.BlobAcce
 
 	// Keep requesting shards until matching one that is undrained.
 	var backend blobstore.BlobAccess
-	ba.shardSelector.GetShard(h, func(index int) bool {
+	ba.shardPermuter.GetShard(h, func(index int) bool {
 		backend = ba.backends[index]
 		return backend == nil
 	})

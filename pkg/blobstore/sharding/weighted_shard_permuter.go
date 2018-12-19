@@ -1,6 +1,6 @@
 package sharding
 
-type weightedShardSelector struct {
+type weightedShardPermuter struct {
 	originalIndices   []int
 	cumulativeWeights []uint64
 }
@@ -44,14 +44,14 @@ func convertListToTree(weights []uint32, originalIndices []int, cumulativeWeight
 	}
 }
 
-// NewWeightedShardSelector is a shard selection algorithm that
+// NewWeightedShardPermuter is a shard selection algorithm that
 // generates a permutation of [0, len(weights)) for every hash, where
 // every index i is returned weights[i] times. This makes it possible to
 // have storage backends with different specifications in terms of
 // capacity and throughput, giving them a proportional amount of
 // traffic.
-func NewWeightedShardSelector(weights []uint32) ShardSelector {
-	s := &weightedShardSelector{
+func NewWeightedShardPermuter(weights []uint32) ShardPermuter {
+	s := &weightedShardPermuter{
 		originalIndices:   make([]int, len(weights)),
 		cumulativeWeights: make([]uint64, len(weights)),
 	}
@@ -59,7 +59,7 @@ func NewWeightedShardSelector(weights []uint32) ShardSelector {
 	return s
 }
 
-func (s *weightedShardSelector) GetShard(hash uint64, propose ShardProposer) {
+func (s *weightedShardPermuter) GetShard(hash uint64, selector ShardSelector) {
 	cumulativeWeights := make([]uint64, len(s.cumulativeWeights))
 	copy(cumulativeWeights, s.cumulativeWeights)
 	for {
@@ -88,7 +88,7 @@ func (s *weightedShardSelector) GetShard(hash uint64, propose ShardProposer) {
 			}
 		}
 
-		if !propose(s.originalIndices[index]) {
+		if !selector(s.originalIndices[index]) {
 			return
 		}
 
