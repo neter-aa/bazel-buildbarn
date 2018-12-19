@@ -4,9 +4,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_gomock",
-    sha256 = "c47bd6247671b55105722ab5728f3ee7213799c3fee2f6fe3882c902ee6960be",
-    strip_prefix = "bazel_gomock-5dae1f83b4a2cd5bcda872e7e42d8cff5e4213d1",
-    urls = ["https://github.com/jmhodges/bazel_gomock/archive/5dae1f83b4a2cd5bcda872e7e42d8cff5e4213d1.tar.gz"],
+    sha256 = "6f50c0e23aef4c33cf3d712e8f3d9bcb694f3eeee34c01bcb2501c2e3aaa2254",
+    strip_prefix = "bazel_gomock-743e7c685409c3e4087705a959506ff973ef8073",
+    urls = ["https://github.com/jmhodges/bazel_gomock/archive/743e7c685409c3e4087705a959506ff973ef8073.tar.gz"],
 )
 
 http_archive(
