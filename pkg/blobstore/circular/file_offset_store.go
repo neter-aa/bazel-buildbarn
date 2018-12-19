@@ -72,7 +72,9 @@ func newOffsetRecord(digest simpleDigest, offset uint64, length int64) offsetRec
 }
 
 // getSlot computes the location at which this record should get stored
-// within the offset file. It computes an FNV-1a hash from the dige
+// within the offset file. It computes an FNV-1a hash from the digest in
+// reverse order, as the start of the record (i.e., the hash) is far
+// more random than the end.
 func (or *offsetRecord) getSlot() uint32 {
 	slot := uint32(2166136261)
 	for i := len(simpleDigest{}) + 4; i > 0; i-- {
