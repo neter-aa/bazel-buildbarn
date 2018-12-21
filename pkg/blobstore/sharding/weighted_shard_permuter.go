@@ -95,6 +95,12 @@ func (s *weightedShardPermuter) GetShard(hash uint64, selector ShardSelector) {
 		// Ended up at a drained backend. Remove this slot from the
 		// tree and retry. Repeating this loop will cause another
 		// slot to be computed without fully rehashing the key.
+		//
+		// TODO(edsch): Is there some kind of constant memory
+		// trick we could use here instead? Using a power of two
+		// cumulative weight and triangular numbers has the
+		// downside of yielding the same sequence for every key
+		// hasing to the same initial slot.
 		for {
 			cumulativeWeights[index]--
 			if index == 0 {
