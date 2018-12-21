@@ -7,9 +7,9 @@
 #
 # # From bazel-toolchains/configs/debian8_clang/0.4.0/toolchain.bazelrc.
 # build:bbb-docker-compose --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-# build:bbb-docker-compose --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.19.0/default:toolchain
+# build:bbb-docker-compose --crosstool_top=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.20.0/default:toolchain
 # build:bbb-docker-compose --extra_execution_platforms=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
-# build:bbb-docker-compose --extra_toolchains=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.19.0/cpp:cc-toolchain-clang-x86_64-default
+# build:bbb-docker-compose --extra_toolchains=@bazel_toolchains//configs/debian8_clang/0.4.0/bazel_0.20.0/cpp:cc-toolchain-clang-x86_64-default
 # build:bbb-docker-compose --host_javabase=@bazel_toolchains//configs/debian8_clang/0.4.0:jdk8
 # build:bbb-docker-compose --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
 # build:bbb-docker-compose --host_platform=@bazel_toolchains//configs/debian8_clang/0.4.0:rbe_debian8
@@ -31,9 +31,9 @@
 
 set -eux
 
-for component in frontend scheduler storage browser worker runner; do
-  bazel run "//cmd/bbb_${component}:bbb_${component}_container"
-done
+#for component in frontend scheduler storage browser worker runner; do
+#  bazel run "//cmd/bbb_${component}:bbb_${component}_container"
+#done
 
 rm -rf worker
 mkdir -m 0777 worker worker/build
