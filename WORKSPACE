@@ -11,11 +11,11 @@ http_archive(
 
 http_archive(
     name = "bazel_toolchains",
-    sha256 = "b5855c9a7635a877ba0c5c939395258f6a6b202901dd9f545018d57aba31b72c",
-    strip_prefix = "bazel-toolchains-6e25ae44ec4a3b14fea9506633f3f820f3b76224",
+    sha256 = "07a81ee03f5feae354c9f98c884e8e886914856fb2b6a63cba4619ef10aaaf0b",
+    strip_prefix = "bazel-toolchains-31b5dc8c4e9c7fd3f5f4d04c6714f2ce87b126c1",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/6e25ae44ec4a3b14fea9506633f3f820f3b76224.tar.gz",
-        "https://github.com/bazelbuild/bazel-toolchains/archive/6e25ae44ec4a3b14fea9506633f3f820f3b76224.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/31b5dc8c4e9c7fd3f5f4d04c6714f2ce87b126c1.tar.gz",
+        "https://github.com/bazelbuild/bazel-toolchains/archive/31b5dc8c4e9c7fd3f5f4d04c6714f2ce87b126c1.tar.gz",
     ],
 )
 
