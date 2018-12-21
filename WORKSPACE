@@ -10,6 +10,13 @@ http_archive(
 )
 
 http_archive(
+    name = "bazel_skylib",
+    sha256 = "eb5c57e4c12e68c0c20bc774bfbc60a568e800d025557bc4ea022c6479acc867",
+    strip_prefix = "bazel-skylib-0.6.0",
+    urls = ["https://github.com/bazelbuild/bazel-skylib/archive/0.6.0.tar.gz"],
+)
+
+http_archive(
     name = "bazel_toolchains",
     sha256 = "07a81ee03f5feae354c9f98c884e8e886914856fb2b6a63cba4619ef10aaaf0b",
     strip_prefix = "bazel-toolchains-31b5dc8c4e9c7fd3f5f4d04c6714f2ce87b126c1",
@@ -28,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "f87fa87475ea107b3c69196f39c82b7bbf58fe27c62a338684c20ca17d1d8613",
-    urls = ["https://github.com/bazelbuild/rules_go/releases/download/0.16.2/rules_go-0.16.2.tar.gz"],
+    sha256 = "7be7dc01f1e0afdba6c8eb2b43d2fa01c743be1b9273ab1eaf6c233df078d705",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.5/rules_go-0.16.5.tar.gz",
 )
 
 http_archive(
