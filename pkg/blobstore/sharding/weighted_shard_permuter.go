@@ -100,7 +100,7 @@ func (s *weightedShardPermuter) GetShard(hash uint64, selector ShardSelector) {
 		// trick we could use here instead? Using a power of two
 		// cumulative weight and triangular numbers has the
 		// downside of yielding the same sequence for every key
-		// hasing to the same initial slot.
+		// hashing to the same initial slot.
 		for {
 			cumulativeWeights[index]--
 			if index == 0 {
