@@ -31,9 +31,9 @@
 
 set -eux
 
-#for component in frontend scheduler storage browser worker runner; do
-#  bazel run "//cmd/bbb_${component}:bbb_${component}_container"
-#done
+for component in frontend scheduler storage browser worker runner; do
+  bazel run "//cmd/bbb_${component}:bbb_${component}_container"
+done
 
 rm -rf worker
 mkdir -m 0777 worker worker/build
