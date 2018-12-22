@@ -229,3 +229,9 @@ go_repository(
     strip_prefix = "uuid-1.1.0",
     urls = ["https://github.com/google/uuid/archive/v1.1.0.tar.gz"],
 )
+
+go_repository(
+    name = "com_github_lazybeaver_xorshift",
+    commit = "ce511d4823dd074d7c37a74225320332d6961abb",
+    importpath = "github.com/lazybeaver/xorshift",
+)
