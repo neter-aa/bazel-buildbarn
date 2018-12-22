@@ -4,34 +4,26 @@ import (
 	"testing"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/sharding"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
-	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
 
-func TestWeightedShardPermuter(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+func TestWeightedShardPermuterDistribution(t *testing.T) {
+	// Distribution across five backends with a total weight of 15.
+	weights := []uint32{1, 4, 2, 5, 3}
+	s := sharding.NewWeightedShardPermuter(weights)
 
-	// Sequence of backends that should be tried for hash. Every
-	// index occurs with the weight provided upon creation.
-	shardSelector := mock.NewMockShardSelector(ctrl)
-	gomock.InOrder(
-		shardSelector.EXPECT().Call(1).Return(true),
-		shardSelector.EXPECT().Call(3).Return(true),
-		shardSelector.EXPECT().Call(3).Return(true),
-		shardSelector.EXPECT().Call(3).Return(true),
-		shardSelector.EXPECT().Call(2).Return(true),
-		shardSelector.EXPECT().Call(1).Return(true),
-		shardSelector.EXPECT().Call(3).Return(true),
-		shardSelector.EXPECT().Call(0).Return(true),
-		shardSelector.EXPECT().Call(3).Return(true),
-		shardSelector.EXPECT().Call(2).Return(true),
-		shardSelector.EXPECT().Call(4).Return(true),
-		shardSelector.EXPECT().Call(1).Return(true),
-		shardSelector.EXPECT().Call(4).Return(true),
-		shardSelector.EXPECT().Call(1).Return(true),
-		shardSelector.EXPECT().Call(4).Return(false),
-	)
-	s := sharding.NewWeightedShardPermuter([]uint32{1, 4, 2, 5, 3})
-	s.GetShard(9127725482751685232, shardSelector.Call)
+	// Request a very long series of backends where a digest may be placed.
+	occurrences := map[int]uint32{}
+	round := 0
+	s.GetShard(9127725482751685232, func(i int) bool {
+		require.True(t, i < len(weights))
+		occurrences[i]++
+		round++
+		return round < 1000000
+	})
+
+	// Requests should be fanned out with a small error margin.
+	for shard, weight := range weights {
+		require.InEpsilon(t, weight*1000000/15, occurrences[shard], 0.01)
+	}
 }
