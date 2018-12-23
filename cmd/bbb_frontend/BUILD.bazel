@@ -1,4 +1,5 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+load("//tools:container.bzl", "container_push_official")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
@@ -35,12 +36,8 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
-container_push(
+container_push_official(
     name = "bbb_frontend_container_push",
-    format = "Docker",
+    component = "bbb-frontend",
     image = ":bbb_frontend_container",
-    registry = "registry-1.docker.io",
-    repository = "buildbarn/bbb-frontend",
-    stamp = True,
-    tag = "{BUILD_SCM_TIMESTAMP}-{BUILD_SCM_REVISION}",
 )
