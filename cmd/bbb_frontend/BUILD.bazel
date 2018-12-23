@@ -41,5 +41,6 @@ container_push(
     image = ":bbb_frontend_container",
     registry = "registry-1.docker.io",
     repository = "buildbarn/bbb-frontend",
+    stamp = True,
     tag = "{BUILD_SCM_TIMESTAMP}-{BUILD_SCM_REVISION}",
 )
