@@ -70,6 +70,8 @@ container images for the individual components:
 You can add this repository to an existing workspace and use
 [`container_push()`](https://github.com/bazelbuild/rules_docker#container_push-1)
 rules to push these container images to a container registry of choice.
+Prebuilt container images may be found on
+[Docker Hub](https://hub.docker.com/u/buildbarn).
 
 The `deployments/kubernetes/` directory in this repository contains
 example YAML files that you may use to run Bazel Buildbarn on
