@@ -1,3 +1,4 @@
+load("//tools:container.bzl", "container_push_official")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_layer")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
@@ -55,4 +56,10 @@ container_image(
         ":bbb_browser_layer_resources",
     ],
     visibility = ["//visibility:public"],
+)
+
+container_push_official(
+    name = "bbb_browser_container_push",
+    component = "bbb-browser",
+    image = ":bbb_browser_container",
 )

@@ -1,3 +1,4 @@
+load("//tools:container.bzl", "container_push_official")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
@@ -34,4 +35,10 @@ container_image(
     entrypoint = ["/bbb_worker"],
     files = [":bbb_worker"],
     visibility = ["//visibility:public"],
+)
+
+container_push_official(
+    name = "bbb_worker_container_push",
+    component = "bbb-worker",
+    image = ":bbb_worker_container",
 )

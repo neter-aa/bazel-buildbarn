@@ -1,3 +1,4 @@
+load("//tools:container.bzl", "container_push_official")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_layer")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
@@ -44,6 +45,12 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push_official(
+    name = "bbb_runner_debian8_container_push",
+    component = "bbb-runner-debian8",
+    image = ":bbb_runner_debian8_container",
+)
+
 container_image(
     name = "bbb_runner_ubuntu16_04_container",
     base = "@rbe_ubuntu16_04_base//image",
@@ -54,4 +61,10 @@ container_image(
     ],
     user = "build",
     visibility = ["//visibility:public"],
+)
+
+container_push_official(
+    name = "bbb_runner_ubuntu16_04_container_push",
+    component = "bbb-runner-ubuntu16-04",
+    image = ":bbb_runner_ubuntu16_04_container",
 )
