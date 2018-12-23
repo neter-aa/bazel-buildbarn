@@ -60,6 +60,13 @@ container_pull(
     repository = "google/rbe-debian8",
 )
 
+container_pull(
+    name = "rbe_ubuntu16_04_base",
+    digest = "sha256:9bd8ba020af33edb5f11eff0af2f63b3bcb168cd6566d7b27c6685e717787928",
+    registry = "launcher.gcr.io",
+    repository = "google/rbe-ubuntu16-04",
+)
+
 load("@io_bazel_rules_go//go:def.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()

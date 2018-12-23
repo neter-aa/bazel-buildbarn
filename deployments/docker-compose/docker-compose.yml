@@ -3,19 +3,13 @@ services:
   bbb-frontend:
     image: bazel/cmd/bbb_frontend:bbb_frontend_container
     command:
-    - -scheduler=local|bbb-scheduler:8981
+    - -scheduler=debian8|bbb-scheduler-debian8:8981
+    - -scheduler=ubuntu16-04|bbb-scheduler-ubuntu16-04:8981
     ports:
     - 7980:80
     - 8980:8980
     volumes:
     - ./config-browser-frontend-worker:/config
-
-  bbb-scheduler:
-    image: bazel/cmd/bbb_scheduler:bbb_scheduler_container
-    expose:
-    - 8981
-    ports:
-    - 7981:80
 
   bbb-storage-0:
     image: bazel/cmd/bbb_storage:bbb_storage_container
@@ -45,19 +39,46 @@ services:
     volumes:
     - ./config-browser-frontend-worker:/config
 
-  bbb-worker:
+  bbb-scheduler-debian8:
+    image: bazel/cmd/bbb_scheduler:bbb_scheduler_container
+    expose:
+    - 8981
+    ports:
+    - 7981:80
+  bbb-worker-debian8:
     image: bazel/cmd/bbb_worker:bbb_worker_container
     command:
     - -browser-url=http://localhost:7983/
     - -concurrency=4
-    - -scheduler=bbb-scheduler:8981
+    - -scheduler=bbb-scheduler-debian8:8981
     ports:
     - 7984:80
     volumes:
     - ./config-browser-frontend-worker:/config
-    - ./worker:/worker
-
-  bbb-runner:
-    image: bazel/cmd/bbb_runner:bbb_runner_container
+    - ./worker-debian8:/worker
+  bbb-runner-debian8:
+    image: bazel/cmd/bbb_runner:bbb_runner_debian8_container
     volumes:
-    - ./worker:/worker
+    - ./worker-debian8:/worker
+
+  bbb-scheduler-ubuntu16-04:
+    image: bazel/cmd/bbb_scheduler:bbb_scheduler_container
+    expose:
+    - 8981
+    ports:
+    - 17981:80
+  bbb-worker-ubuntu16-04:
+    image: bazel/cmd/bbb_worker:bbb_worker_container
+    command:
+    - -browser-url=http://localhost:7983/
+    - -concurrency=4
+    - -scheduler=bbb-scheduler-ubuntu16-04:8981
+    ports:
+    - 17984:80
+    volumes:
+    - ./config-browser-frontend-worker:/config
+    - ./worker-ubuntu16-04:/worker
+  bbb-runner-ubuntu16-04:
+    image: bazel/cmd/bbb_runner:bbb_runner_ubuntu16_04_container
+    volumes:
+    - ./worker-ubuntu16-04:/worker
