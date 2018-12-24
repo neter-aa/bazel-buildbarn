@@ -12,7 +12,7 @@ import (
 type directoryCachingContentAddressableStorage struct {
 	ContentAddressableStorage
 
-	lock sync.Mutex
+	lock sync.RWMutex
 
 	digestKeyFormat util.DigestKeyFormat
 	maxDirectories  int
@@ -54,9 +54,9 @@ func (cas *directoryCachingContentAddressableStorage) GetDirectory(ctx context.C
 	key := digest.GetKey(cas.digestKeyFormat)
 
 	// Check the cache.
-	cas.lock.Lock()
+	cas.lock.RLock()
 	directory, ok := cas.directoriesPresentMessage[key]
-	cas.lock.Unlock()
+	cas.lock.RUnlock()
 	if ok {
 		return directory, nil
 	}

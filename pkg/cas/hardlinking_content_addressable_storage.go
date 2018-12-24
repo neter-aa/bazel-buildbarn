@@ -30,7 +30,7 @@ func init() {
 type hardlinkingContentAddressableStorage struct {
 	ContentAddressableStorage
 
-	lock sync.Mutex
+	lock sync.RWMutex
 
 	digestKeyFormat util.DigestKeyFormat
 	cacheDirectory  filesystem.Directory
@@ -89,14 +89,14 @@ func (cas *hardlinkingContentAddressableStorage) GetFile(ctx context.Context, di
 	}
 
 	// If the file is present in the cache, hardlink it to the destination.
-	cas.lock.Lock()
+	cas.lock.RLock()
 	if _, ok := cas.filesPresentSize[key]; ok {
 		err := cas.cacheDirectory.Link(key, directory, name)
-		cas.lock.Unlock()
+		cas.lock.RUnlock()
 		hardlinkingContentAddressableStorageOperationsTotalHit.Inc()
 		return err
 	}
-	cas.lock.Unlock()
+	cas.lock.RUnlock()
 	hardlinkingContentAddressableStorageOperationsTotalMiss.Inc()
 
 	// Download the file at the intended location.
