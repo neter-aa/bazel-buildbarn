@@ -12,6 +12,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -22,19 +23,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type stringList []string
-
-func (i *stringList) String() string {
-	return "my string representation"
-}
-
-func (i *stringList) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
 func main() {
-	var schedulersList stringList
+	var schedulersList util.StringList
 	var (
 		actionCacheAllowUpdates = flag.Bool("ac-allow-updates", false, "Allow clients to write into the action cache")
 		blobstoreConfig         = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
