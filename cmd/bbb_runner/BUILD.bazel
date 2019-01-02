@@ -11,6 +11,7 @@ go_library(
         "//pkg/environment:go_default_library",
         "//pkg/filesystem:go_default_library",
         "//pkg/proto/runner:go_default_library",
+        "//pkg/util:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )
@@ -36,6 +37,10 @@ container_layer(
 container_image(
     name = "bbb_runner_debian8_container",
     base = "@rbe_debian8_base//image",
+    cmd = [
+        "-temp-directory=/tmp",
+        "-temp-directory=/var/tmp",
+    ],
     entrypoint = ["/bbb_runner"],
     layers = [
         ":bbb_runner_layer",
@@ -54,6 +59,10 @@ container_push_official(
 container_image(
     name = "bbb_runner_ubuntu16_04_container",
     base = "@rbe_ubuntu16_04_base//image",
+    cmd = [
+        "-temp-directory=/tmp",
+        "-temp-directory=/var/tmp",
+    ],
     entrypoint = ["/bbb_runner"],
     layers = [
         ":bbb_runner_layer",
