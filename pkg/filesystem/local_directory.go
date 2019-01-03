@@ -208,9 +208,13 @@ func (d *localDirectory) RemoveAllChildren() error {
 	for _, child := range children {
 		name := child.Name()
 		if child.Mode()&os.ModeType == os.ModeDir {
-			// A directory. Remove all children.
-			// TODO(edsch): Call chmod(700) to ensure
-			// directory can be accessed?
+			// A directory. Remove all children. Adjust permissions
+			// to ensure we can delete directories with degenerate
+			// permissions.
+			// TODO(edsch): This could use AT_SYMLINK_NOFOLLOW.
+			// Unfortunately, this is broken on Linux.
+			// Details: https://github.com/golang/go/issues/20130
+			unix.Fchmodat(d.fd, name, 0700, 0)
 			subdirectory, err := d.Enter(name)
 			if err != nil {
 				return err
