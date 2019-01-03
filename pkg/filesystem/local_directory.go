@@ -42,8 +42,9 @@ func (d *localDirectory) Enter(name string) (Directory, error) {
 	if err := validateFilename(name); err != nil {
 		return nil, err
 	}
+	defer runtime.KeepAlive(d)
+
 	fd, err := unix.Openat(d.fd, name, unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_RDONLY, 0)
-	runtime.KeepAlive(d)
 	if err != nil {
 		return nil, err
 	}
@@ -68,23 +69,24 @@ func (d *localDirectory) Link(oldName string, newDirectory Directory, newName st
 	if err := validateFilename(newName); err != nil {
 		return err
 	}
+	defer runtime.KeepAlive(d)
+	defer runtime.KeepAlive(newDirectory)
+
 	d2, ok := newDirectory.(*localDirectory)
 	if !ok {
 		return errors.New("Source and target directory have different types")
 	}
-	err := unix.Linkat(d.fd, oldName, d2.fd, newName, 0)
-	runtime.KeepAlive(d)
-	runtime.KeepAlive(d2)
-	return err
+	return unix.Linkat(d.fd, oldName, d2.fd, newName, 0)
 }
 
 func (d *localDirectory) Lstat(name string) (FileInfo, error) {
 	if err := validateFilename(name); err != nil {
 		return nil, err
 	}
+	defer runtime.KeepAlive(d)
+
 	var stat unix.Stat_t
 	err := unix.Fstatat(d.fd, name, &stat, unix.AT_SYMLINK_NOFOLLOW)
-	runtime.KeepAlive(d)
 	if err != nil {
 		return nil, err
 	}
@@ -106,17 +108,18 @@ func (d *localDirectory) Mkdir(name string, perm os.FileMode) error {
 	if err := validateFilename(name); err != nil {
 		return err
 	}
-	err := unix.Mkdirat(d.fd, name, uint32(perm))
-	runtime.KeepAlive(d)
-	return err
+	defer runtime.KeepAlive(d)
+
+	return unix.Mkdirat(d.fd, name, uint32(perm))
 }
 
 func (d *localDirectory) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	if err := validateFilename(name); err != nil {
 		return nil, err
 	}
+	defer runtime.KeepAlive(d)
+
 	fd, err := unix.Openat(d.fd, name, flag|unix.O_NOFOLLOW, uint32(perm))
-	runtime.KeepAlive(d)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +127,8 @@ func (d *localDirectory) OpenFile(name string, flag int, perm os.FileMode) (File
 }
 
 func (d *localDirectory) ReadDir() ([]FileInfo, error) {
+	defer runtime.KeepAlive(d)
+
 	// Obtain filenames in current directory.
 	fd, err := unix.Openat(d.fd, ".", unix.O_DIRECTORY|unix.O_RDONLY, 0)
 	if err != nil {
@@ -156,10 +161,11 @@ func (d *localDirectory) Readlink(name string) (string, error) {
 	if err := validateFilename(name); err != nil {
 		return "", err
 	}
+	defer runtime.KeepAlive(d)
+
 	for l := 128; ; l *= 2 {
 		b := make([]byte, l)
 		n, err := unix.Readlinkat(d.fd, name, b)
-		runtime.KeepAlive(d)
 		if err != nil {
 			return "", err
 		}
@@ -173,6 +179,8 @@ func (d *localDirectory) Remove(name string) error {
 	if err := validateFilename(name); err != nil {
 		return err
 	}
+	defer runtime.KeepAlive(d)
+
 	// First try deleting it as a regular file.
 	err1 := unix.Unlinkat(d.fd, name, 0)
 	if err1 == nil {
@@ -180,7 +188,6 @@ func (d *localDirectory) Remove(name string) error {
 	}
 	// Then try to delete it as a directory.
 	err2 := unix.Unlinkat(d.fd, name, unix.AT_REMOVEDIR)
-	runtime.KeepAlive(d)
 	if err2 == nil {
 		return nil
 	}
@@ -192,6 +199,8 @@ func (d *localDirectory) Remove(name string) error {
 }
 
 func (d *localDirectory) RemoveAllChildren() error {
+	defer runtime.KeepAlive(d)
+
 	children, err := d.ReadDir()
 	if err != nil {
 		return err
@@ -221,11 +230,15 @@ func (d *localDirectory) RemoveAllChildren() error {
 			}
 		}
 	}
-	runtime.KeepAlive(d)
 	return nil
 }
 
 func (d *localDirectory) RemoveAll(name string) error {
+	if err := validateFilename(name); err != nil {
+		return err
+	}
+	defer runtime.KeepAlive(d)
+
 	// TODO(edsch): Call chmod(700) to ensure directory can be accessed?
 	if subdirectory, err := d.Enter(name); err == nil {
 		// A directory. Remove all children.
@@ -234,14 +247,10 @@ func (d *localDirectory) RemoveAll(name string) error {
 		if err != nil {
 			return err
 		}
-		err = unix.Unlinkat(d.fd, name, unix.AT_REMOVEDIR)
-		runtime.KeepAlive(d)
-		return err
+		return unix.Unlinkat(d.fd, name, unix.AT_REMOVEDIR)
 	} else if err == syscall.ENOTDIR {
 		// Not a directory. Remove it immediately.
-		err := unix.Unlinkat(d.fd, name, 0)
-		runtime.KeepAlive(d)
-		return err
+		return unix.Unlinkat(d.fd, name, 0)
 	} else {
 		return err
 	}
@@ -251,7 +260,7 @@ func (d *localDirectory) Symlink(oldName string, newName string) error {
 	if err := validateFilename(newName); err != nil {
 		return err
 	}
-	err := unix.Symlinkat(oldName, d.fd, newName)
-	runtime.KeepAlive(d)
-	return err
+	defer runtime.KeepAlive(d)
+
+	return unix.Symlinkat(oldName, d.fd, newName)
 }
