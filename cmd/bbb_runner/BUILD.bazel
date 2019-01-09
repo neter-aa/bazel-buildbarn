@@ -38,6 +38,7 @@ container_image(
     name = "bbb_runner_debian8_container",
     base = "@rbe_debian8_base//image",
     cmd = [
+        "-temp-directory=/run/lock",
         "-temp-directory=/tmp",
         "-temp-directory=/var/tmp",
     ],
@@ -60,6 +61,7 @@ container_image(
     name = "bbb_runner_ubuntu16_04_container",
     base = "@rbe_ubuntu16_04_base//image",
     cmd = [
+        "-temp-directory=/run/lock",
         "-temp-directory=/tmp",
         "-temp-directory=/var/tmp",
     ],
