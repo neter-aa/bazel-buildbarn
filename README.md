@@ -137,3 +137,12 @@ Once added, you may perform remote builds against Bazel Buildbarn by running
 the command below:
 
     bazel build --config=bbb-debian8 //...
+
+## Bazel Buildbarn as a library
+
+[![GoDoc](https://godoc.org/github.com/EdSchouten/bazel-buildbarn?status.svg)](https://godoc.org/github.com/EdSchouten/bazel-buildbarn)
+
+Internally, Bazel Buildbarn consists of a large set of small classes
+with isolated logic. Even if Bazel Buildbarn is not a perfect fit for
+your environment, feel free to reuse some of the internal abstractions
+(e.g., the storage lager) to design your own distributed build system!
