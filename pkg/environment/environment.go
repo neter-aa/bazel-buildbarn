@@ -16,6 +16,7 @@ type Environment interface {
 	runner.RunnerServer
 
 	// GetBuildDirectory returns a handle to a directory in which a
-	// BuildExecutor may place the input files of the build step.
+	// BuildExecutor may place the input files of the build step and
+	// where output files created by the build action are stored.
 	GetBuildDirectory() filesystem.Directory
 }
