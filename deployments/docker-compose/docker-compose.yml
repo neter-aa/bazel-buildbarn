@@ -58,6 +58,7 @@ services:
     - ./worker-debian8:/worker
   bbb-runner-debian8:
     image: bazel/cmd/bbb_runner:bbb_runner_debian8_container
+    network_mode: none
     volumes:
     - ./worker-debian8:/worker
 
@@ -80,5 +81,6 @@ services:
     - ./worker-ubuntu16-04:/worker
   bbb-runner-ubuntu16-04:
     image: bazel/cmd/bbb_runner:bbb_runner_ubuntu16_04_container
+    network_mode: none
     volumes:
     - ./worker-ubuntu16-04:/worker
