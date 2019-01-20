@@ -17,9 +17,14 @@ set -eux
 
 # Golang architecture of the current system.
 ARCH="$(uname | tr '[A-Z]' '[a-z]')_amd64_pure_stripped"
+# Location of this script
+SCRIPT_DIR="$(dirname "$0")"
 # Location where the Buildbarn source tree is stored.
-BBB_SRC="$(pwd)/../.."
+BBB_SRC="$(realpath "${SCRIPT_DIR}/../..")"
 
+if [[ "${PWD}" != "${SCRIPT_DIR}" ]]; then
+    cd "${SCRIPT_DIR}"
+fi
 CURWD="$(pwd)"
 trap 'kill $(jobs -p)' EXIT TERM INT
 
