@@ -293,11 +293,11 @@ func TestLocalBuildExecutorMissingInputDirectoryDigest(t *testing.T) {
 		map[string]string{},
 	).Return(environment, nil)
 	buildDirectory := mock.NewMockDirectory(ctrl)
-	buildDirectory.EXPECT().Mkdir("Hello", os.FileMode(0777)).Return(nil)
+	buildDirectory.EXPECT().Mkdir("Hello", os.FileMode(0755)).Return(nil)
 	helloDirectory := mock.NewMockDirectory(ctrl)
 	buildDirectory.EXPECT().Enter("Hello").Return(helloDirectory, nil)
 	helloDirectory.EXPECT().Close()
-	helloDirectory.EXPECT().Mkdir("World", os.FileMode(0777)).Return(nil)
+	helloDirectory.EXPECT().Mkdir("World", os.FileMode(0755)).Return(nil)
 	worldDirectory := mock.NewMockDirectory(ctrl)
 	helloDirectory.EXPECT().Enter("World").Return(worldDirectory, nil)
 	worldDirectory.EXPECT().Close()
@@ -408,11 +408,6 @@ func TestLocalBuildExecutorOutputDirectoryCreationFailure(t *testing.T) {
 		},
 		OutputFiles: []string{"foo/bar/baz"},
 	}, nil)
-	contentAddressableStorage.EXPECT().GetDirectory(
-		ctx, util.MustNewDigest("fedora", &remoteexecution.Digest{
-			Hash:      "7777777777777777777777777777777777777777777777777777777777777777",
-			SizeBytes: 42,
-		})).Return(&remoteexecution.Directory{}, nil)
 	environmentManager := mock.NewMockManager(ctrl)
 	environment := mock.NewMockManagedEnvironment(ctrl)
 	environmentManager.EXPECT().Acquire(

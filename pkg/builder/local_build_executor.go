@@ -79,7 +79,7 @@ func (be *localBuildExecutor) createInputDirectory(ctx context.Context, partialD
 	}
 	for _, directory := range directory.Directories {
 		childComponents := append(components, directory.Name)
-		if err := inputDirectory.Mkdir(directory.Name, 0777); err != nil {
+		if err := inputDirectory.Mkdir(directory.Name, 0755); err != nil && !os.IsExist(err) {
 			return util.StatusWrapf(err, "Failed to create input directory %#v", path.Join(childComponents...))
 		}
 		childDirectory, err := inputDirectory.Enter(directory.Name)
@@ -247,15 +247,10 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 	}
 	defer environment.Release()
 
-	// Set up inputs.
-	buildDirectory := environment.GetBuildDirectory()
-	if err := be.createInputDirectory(ctx, action.InputRootDigest, actionDigest, buildDirectory, []string{"."}); err != nil {
-		return convertErrorToExecuteResponse(err), false
-	}
-
 	// Create and open parent directories of where we expect to see output.
 	// Build rules generally expect the parent directories to already be
 	// there. We later use the directory handles to extract output files.
+	buildDirectory := environment.GetBuildDirectory()
 	outputParentDirectories := map[string]filesystem.Directory{}
 	for _, outputDirectory := range command.OutputDirectories {
 		dirPath := path.Dir(outputDirectory)
@@ -282,6 +277,14 @@ func (be *localBuildExecutor) Execute(ctx context.Context, request *remoteexecut
 				defer dir.Close()
 			}
 		}
+	}
+
+	// Set up inputs. Only do this after creating the output
+	// directories to ensure all directories containing one or more
+	// outputs (and their parent directories) are writable. Such
+	// directories have mode 0777 instead of 0755.
+	if err := be.createInputDirectory(ctx, action.InputRootDigest, actionDigest, buildDirectory, []string{"."}); err != nil {
+		return convertErrorToExecuteResponse(err), false
 	}
 
 	timeAfterPrepareFilesytem := time.Now()
