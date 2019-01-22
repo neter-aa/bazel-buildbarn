@@ -224,9 +224,9 @@ go_repository(
 go_repository(
     name = "com_github_buildkite_terminal",
     importpath = "github.com/buildkite/terminal",
-    sha256 = "ba8e7566a7fe5c62089fa56191c80bf15b121ae369d0c17f6f80669d3bbbb23f",
-    strip_prefix = "terminal-3.1.0",
-    urls = ["https://github.com/buildkite/terminal/archive/v3.1.0.tar.gz"],
+    sha256 = "5d0203bb4dd007ad607df7d0eecbe50ff4bdaa0e56e1ad2ea1eb331ff2ae5be6",
+    strip_prefix = "terminal-to-html-3.1.0",
+    urls = ["https://github.com/buildkite/terminal-to-html/archive/v3.1.0.tar.gz"],
 )
 
 go_repository(
