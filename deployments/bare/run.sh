@@ -15,6 +15,8 @@
 
 set -eux
 
+cd "$(dirname "$0")"
+
 # Golang architecture of the current system.
 ARCH="$(uname | tr '[A-Z]' '[a-z]')_amd64_pure_stripped"
 # Location where the Buildbarn source tree is stored.
