@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"os"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
@@ -47,6 +48,10 @@ func main() {
 
 	s := grpc.NewServer()
 	runner.RegisterRunnerServer(s, runnerServer)
+
+	if err := os.Remove(*listenPath); err != nil && !os.IsNotExist(err) {
+		log.Fatal("Could not close stale socket: ", err)
+	}
 
 	sock, err := net.Listen("unix", *listenPath)
 	if err != nil {
