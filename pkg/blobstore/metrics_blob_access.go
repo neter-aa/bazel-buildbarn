@@ -38,13 +38,13 @@ func init() {
 type metricsBlobAccess struct {
 	blobAccess                                     BlobAccess
 	blobAccessOperationsStartedTotalGet            prometheus.Counter
-	blobAccessOperationsDurationSecondsGet         prometheus.Histogram
+	blobAccessOperationsDurationSecondsGet         prometheus.Observer
 	blobAccessOperationsStartedTotalPut            prometheus.Counter
-	blobAccessOperationsDurationSecondsPut         prometheus.Histogram
+	blobAccessOperationsDurationSecondsPut         prometheus.Observer
 	blobAccessOperationsStartedTotalDelete         prometheus.Counter
-	blobAccessOperationsDurationSecondsDelete      prometheus.Histogram
+	blobAccessOperationsDurationSecondsDelete      prometheus.Observer
 	blobAccessOperationsStartedTotalFindMissing    prometheus.Counter
-	blobAccessOperationsDurationSecondsFindMissing prometheus.Histogram
+	blobAccessOperationsDurationSecondsFindMissing prometheus.Observer
 }
 
 // NewMetricsBlobAccess creates an adapter for BlobAccess that adds

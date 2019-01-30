@@ -71,9 +71,9 @@ gazelle_dependencies()
 go_repository(
     name = "com_github_aws_aws_sdk_go",
     importpath = "github.com/aws/aws-sdk-go",
-    sha256 = "b6cd9c78df8aeb973f8d9b01d11c1d1e5096850614b3a3e0b4111ec747d811d3",
-    strip_prefix = "aws-sdk-go-bc3f534c19ffdf835e524e11f0f825b3eaf541c3",
-    urls = ["https://github.com/aws/aws-sdk-go/archive/bc3f534c19ffdf835e524e11f0f825b3eaf541c3.tar.gz"],
+    sha256 = "6ba3169493880a63128b6c6edc9119817df257db0b34b27887cad871767f0525",
+    strip_prefix = "aws-sdk-go-1.16.26",
+    urls = ["https://github.com/aws/aws-sdk-go/archive/v1.16.26.tar.gz"],
 )
 
 go_repository(
@@ -84,8 +84,10 @@ go_repository(
 
 go_repository(
     name = "com_github_go_ini_ini",
-    commit = "358ee7663966325963d4e8b2e1fbd570c5195153",
     importpath = "github.com/go-ini/ini",
+    sha256 = "601f623177e2298d82f75848b6a014dcb626f8e3e1b4c30aae0ec1a9e1b2ecc1",
+    strip_prefix = "ini-1.41.0",
+    urls = ["https://github.com/go-ini/ini/archive/v1.41.0.tar.gz"],
 )
 
 go_repository(
@@ -96,7 +98,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jmespath_go_jmespath",
-    commit = "0b12d6b5",
+    commit = "c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5",
     importpath = "github.com/jmespath/go-jmespath",
 )
 
@@ -108,8 +110,10 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "c5b7fccd204277076155f10851dad72b76a49317",
     importpath = "github.com/prometheus/client_golang",
+    sha256 = "5f6ca8740a08622ae0a19c32b1026b8233bfd943a1f4af34963d326ab5fa94e5",
+    strip_prefix = "client_golang-0.9.2",
+    urls = ["https://github.com/prometheus/client_golang/archive/v0.9.2.tar.gz"],
 )
 
 go_repository(
@@ -120,8 +124,10 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "7600349dcfe1abd18d72d3a1770870d9800a7801",
     importpath = "github.com/prometheus/common",
+    sha256 = "3a02a3c8d881ef0be78fc58d63d14979ce0226f91ab52b2d67a11bc120e054dd",
+    strip_prefix = "common-0.2.0",
+    urls = ["https://github.com/prometheus/common/archive/v0.2.0.tar.gz"],
 )
 
 go_repository(
@@ -132,8 +138,10 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3",
     importpath = "github.com/satori/go.uuid",
+    sha256 = "6f9d9549958252d7c5a5ed1cabeedeaab7a600ca0b888a3666cce4c3590aa5a7",
+    strip_prefix = "go.uuid-1.2.0",
+    urls = ["https://github.com/satori/go.uuid/archive/v1.2.0.tar.gz"],
 )
 
 go_repository(
@@ -162,14 +170,18 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_prometheus",
-    commit = "c225b8c3b01faf2899099b768856a9e916e5087b",
     importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
+    sha256 = "eba66530952a126ab869205bdb909af607bfd9eb09f00207b62eb29140258aa9",
+    strip_prefix = "go-grpc-prometheus-1.2.0",
+    urls = ["https://github.com/grpc-ecosystem/go-grpc-prometheus/archive/v1.2.0.tar.gz"],
 )
 
 go_repository(
     name = "com_github_go_redis_redis",
-    commit = "480db94d33e6088e08d628833b6c0705451d24bb",
     importpath = "github.com/go-redis/redis",
+    sha256 = "c997aca07026a52745e3d7aeab528550b90d3bae65ff2b67991d890bb2a7b1ff",
+    strip_prefix = "redis-6.15.1",
+    urls = ["https://github.com/go-redis/redis/archive/v6.15.1.tar.gz"],
 )
 
 go_repository(
@@ -190,20 +202,26 @@ go_repository(
 
 go_repository(
     name = "com_github_stretchr_testify",
-    commit = "04af85275a5c7ac09d16bb3b9b2e751ed45154e5",
     importpath = "github.com/stretchr/testify",
+    sha256 = "0cd9c199a72b8d80621624b37c0ed5ac724352d458506a31dfa86710551e7fc5",
+    strip_prefix = "testify-1.3.0",
+    urls = ["https://github.com/stretchr/testify/archive/v1.3.0.tar.gz"],
 )
 
 go_repository(
     name = "com_github_gorilla_context",
-    commit = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
     importpath = "github.com/gorilla/context",
+    sha256 = "2dfdd051c238695bf9ebfed0bf6a8c533507ac0893bce23be5930e973736bb03",
+    strip_prefix = "context-1.1.1",
+    urls = ["https://github.com/gorilla/context/archive/v1.1.1.tar.gz"],
 )
 
 go_repository(
     name = "com_github_gorilla_mux",
-    commit = "e3702bed27f0d39777b0b37b664b6280e8ef8fbf",
     importpath = "github.com/gorilla/mux",
+    sha256 = "5aca5bfa16325506b23b66ce34e2b9336a3a341b8c51ba7b0faf7d0daade0116",
+    strip_prefix = "mux-1.7.0",
+    urls = ["https://github.com/gorilla/mux/archive/v1.7.0.tar.gz"],
 )
 
 go_repository(
