@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"container/heap"
 	"context"
 	"log"
 	"sync"
@@ -17,15 +18,55 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// workerBuildJob holds the information we need to track for a single
+// build action that is enqueued.
 type workerBuildJob struct {
 	name             string
 	actionDigest     *remoteexecution.Digest
 	deduplicationKey string
 	executeRequest   remoteexecution.ExecuteRequest
+	insertionOrder   uint64
 
 	stage                   remoteexecution.ExecuteOperationMetadata_Stage
 	executeResponse         *remoteexecution.ExecuteResponse
 	executeTransitionWakeup *sync.Cond
+}
+
+// workerBuildJobHeap is a heap of workerBuildJob entries, sorted by
+// priority in which they should be execution.
+type workerBuildJobHeap []*workerBuildJob
+
+func (h workerBuildJobHeap) Len() int {
+	return len(h)
+}
+
+func (h workerBuildJobHeap) Less(i, j int) bool {
+	// Lexicographic order on priority and insertion order.
+	var iPriority int32
+	if policy := h[i].executeRequest.ExecutionPolicy; policy != nil {
+		iPriority = policy.Priority
+	}
+	var jPriority int32
+	if policy := h[j].executeRequest.ExecutionPolicy; policy != nil {
+		jPriority = policy.Priority
+	}
+	return iPriority < jPriority || (iPriority == jPriority && h[i].insertionOrder < h[j].insertionOrder)
+}
+
+func (h workerBuildJobHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
+func (h *workerBuildJobHeap) Push(x interface{}) {
+	*h = append(*h, x.(*workerBuildJob))
+}
+
+func (h *workerBuildJobHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
 }
 
 func (job *workerBuildJob) waitExecution(out remoteexecution.Execution_ExecuteServer) error {
@@ -67,11 +108,12 @@ func (job *workerBuildJob) waitExecution(out remoteexecution.Execution_ExecuteSe
 type workerBuildQueue struct {
 	deduplicationKeyFormat util.DigestKeyFormat
 	jobsPendingMax         uint
+	nextInsertionOrder     uint64
 
 	jobsLock                   sync.Mutex
 	jobsNameMap                map[string]*workerBuildJob
 	jobsDeduplicationMap       map[string]*workerBuildJob
-	jobsPending                []*workerBuildJob
+	jobsPending                workerBuildJobHeap
 	jobsPendingInsertionWakeup *sync.Cond
 }
 
@@ -130,7 +172,7 @@ func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remo
 	job, ok := bq.jobsDeduplicationMap[deduplicationKey]
 	if !ok {
 		// TODO(edsch): Maybe let the number of workers influence this?
-		if uint(len(bq.jobsPending)) >= bq.jobsPendingMax {
+		if uint(bq.jobsPending.Len()) >= bq.jobsPendingMax {
 			return status.Errorf(codes.Unavailable, "Too many jobs pending")
 		}
 
@@ -139,13 +181,15 @@ func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remo
 			actionDigest:            in.ActionDigest,
 			deduplicationKey:        deduplicationKey,
 			executeRequest:          *in,
+			insertionOrder:          bq.nextInsertionOrder,
 			stage:                   remoteexecution.ExecuteOperationMetadata_QUEUED,
 			executeTransitionWakeup: sync.NewCond(&bq.jobsLock),
 		}
 		bq.jobsNameMap[job.name] = job
 		bq.jobsDeduplicationMap[deduplicationKey] = job
-		bq.jobsPending = append(bq.jobsPending, job)
+		heap.Push(&bq.jobsPending, job)
 		bq.jobsPendingInsertionWakeup.Signal()
+		bq.nextInsertionOrder++
 	}
 	return job.waitExecution(out)
 }
@@ -181,7 +225,7 @@ func (bq *workerBuildQueue) GetWork(stream scheduler.Scheduler_GetWorkServer) er
 	for {
 		// Wait for jobs to appear.
 		// TODO(edsch): sync.Cond.WaitWithContext() would be helpful here.
-		for len(bq.jobsPending) == 0 {
+		for bq.jobsPending.Len() == 0 {
 			bq.jobsPendingInsertionWakeup.Wait()
 		}
 		if err := stream.Context().Err(); err != nil {
@@ -190,8 +234,7 @@ func (bq *workerBuildQueue) GetWork(stream scheduler.Scheduler_GetWorkServer) er
 		}
 
 		// Extract job from queue.
-		job := bq.jobsPending[0]
-		bq.jobsPending = bq.jobsPending[1:]
+		job := heap.Pop(&bq.jobsPending).(*workerBuildJob)
 		job.stage = remoteexecution.ExecuteOperationMetadata_EXECUTING
 
 		// Perform execution of the job.
