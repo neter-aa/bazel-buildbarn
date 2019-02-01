@@ -50,12 +50,12 @@ func main() {
 	runner.RegisterRunnerServer(s, runnerServer)
 
 	if err := os.Remove(*listenPath); err != nil && !os.IsNotExist(err) {
-		log.Fatal("Could not close stale socket: ", err)
+		log.Fatalf("Could not remove stale socket %#v: %s", *listenPath, err)
 	}
 
 	sock, err := net.Listen("unix", *listenPath)
 	if err != nil {
-		log.Fatal("Failed to create listening socket: ", err)
+		log.Fatalf("Failed to create listening socket %#v: %s", *listenPath, err)
 	}
 	if err := s.Serve(sock); err != nil {
 		log.Fatal("Failed to serve RPC server: ", err)
