@@ -3,15 +3,16 @@ package cas
 import (
 	"context"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/failure"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/buildbarn/bb-storage/pkg/cas"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
+	cas_proto "github.com/buildbarn/bb-storage/pkg/proto/cas"
 	"github.com/buildbarn/bb-storage/pkg/util"
 )
 
 type readWriteDecouplingContentAddressableStorage struct {
-	reader ContentAddressableStorage
-	writer ContentAddressableStorage
+	reader cas.ContentAddressableStorage
+	writer cas.ContentAddressableStorage
 }
 
 // NewReadWriteDecouplingContentAddressableStorage takes a pair of
@@ -19,7 +20,7 @@ type readWriteDecouplingContentAddressableStorage struct {
 // requests to them, respectively. It can, for example, be used to
 // forward read requests to a process-wide cache, while write requests
 // are sent to a worker/action-specific write cache.
-func NewReadWriteDecouplingContentAddressableStorage(reader ContentAddressableStorage, writer ContentAddressableStorage) ContentAddressableStorage {
+func NewReadWriteDecouplingContentAddressableStorage(reader cas.ContentAddressableStorage, writer cas.ContentAddressableStorage) cas.ContentAddressableStorage {
 	return &readWriteDecouplingContentAddressableStorage{
 		reader: reader,
 		writer: writer,
@@ -28,10 +29,6 @@ func NewReadWriteDecouplingContentAddressableStorage(reader ContentAddressableSt
 
 func (cas *readWriteDecouplingContentAddressableStorage) GetAction(ctx context.Context, digest *util.Digest) (*remoteexecution.Action, error) {
 	return cas.reader.GetAction(ctx, digest)
-}
-
-func (cas *readWriteDecouplingContentAddressableStorage) GetActionFailure(ctx context.Context, digest *util.Digest) (*failure.ActionFailure, error) {
-	return cas.reader.GetActionFailure(ctx, digest)
 }
 
 func (cas *readWriteDecouplingContentAddressableStorage) GetCommand(ctx context.Context, digest *util.Digest) (*remoteexecution.Command, error) {
@@ -50,8 +47,8 @@ func (cas *readWriteDecouplingContentAddressableStorage) GetTree(ctx context.Con
 	return cas.reader.GetTree(ctx, digest)
 }
 
-func (cas *readWriteDecouplingContentAddressableStorage) PutActionFailure(ctx context.Context, actionFailure *failure.ActionFailure, parentDigest *util.Digest) (*util.Digest, error) {
-	return cas.writer.PutActionFailure(ctx, actionFailure, parentDigest)
+func (cas *readWriteDecouplingContentAddressableStorage) GetUncachedActionResult(ctx context.Context, digest *util.Digest) (*cas_proto.UncachedActionResult, error) {
+	return cas.reader.GetUncachedActionResult(ctx, digest)
 }
 
 func (cas *readWriteDecouplingContentAddressableStorage) PutFile(ctx context.Context, directory filesystem.Directory, name string, parentDigest *util.Digest) (*util.Digest, error) {
@@ -64,4 +61,8 @@ func (cas *readWriteDecouplingContentAddressableStorage) PutLog(ctx context.Cont
 
 func (cas *readWriteDecouplingContentAddressableStorage) PutTree(ctx context.Context, tree *remoteexecution.Tree, parentDigest *util.Digest) (*util.Digest, error) {
 	return cas.writer.PutTree(ctx, tree, parentDigest)
+}
+
+func (cas *readWriteDecouplingContentAddressableStorage) PutUncachedActionResult(ctx context.Context, uncachedActionResult *cas_proto.UncachedActionResult, parentDigest *util.Digest) (*util.Digest, error) {
+	return cas.writer.PutUncachedActionResult(ctx, uncachedActionResult, parentDigest)
 }

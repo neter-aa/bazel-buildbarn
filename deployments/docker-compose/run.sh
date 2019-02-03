@@ -56,11 +56,12 @@
 
 set -eux
 
-for component in frontend scheduler browser worker; do
+for component in frontend scheduler worker; do
   bazel run "//cmd/bbb_${component}:bbb_${component}_container"
 done
 bazel run "//cmd/bbb_runner:bbb_runner_debian8_container"
 bazel run "//cmd/bbb_runner:bbb_runner_ubuntu16_04_container"
+bazel run "@com_github_buildbarn_bb_browser//cmd/bb_browser:bb_browser_container"
 bazel run "@com_github_buildbarn_bb_storage//cmd/bb_storage:bb_storage_container"
 
 for worker in worker-debian8 worker-ubuntu16-04; do

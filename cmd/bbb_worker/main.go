@@ -13,12 +13,13 @@ import (
 
 	bbb_blobstore "github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	cas_re "github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	"github.com/buildbarn/bb-storage/pkg/ac"
 	"github.com/buildbarn/bb-storage/pkg/blobstore"
 	"github.com/buildbarn/bb-storage/pkg/blobstore/configuration"
+	"github.com/buildbarn/bb-storage/pkg/cas"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -30,7 +31,7 @@ import (
 func main() {
 	var (
 		blobstoreConfig    = flag.String("blobstore-config", "/config/blobstore.conf", "Configuration for blob storage")
-		browserURLString   = flag.String("browser-url", "http://bbb-browser/", "URL of the Bazel Buildbarn Browser, accessible by the user through 'bazel build --verbose_failures'")
+		browserURLString   = flag.String("browser-url", "http://bb-browser/", "URL of the Buildbarn Browser, shown to the user upon build failure")
 		buildDirectoryPath = flag.String("build-directory", "/worker/build", "Directory where builds take place")
 		cacheDirectoryPath = flag.String("cache-directory", "/worker/cache", "Directory where build input files are cached")
 		concurrency        = flag.Int("concurrency", 1, "Number of actions to run concurrently")
@@ -80,8 +81,8 @@ func main() {
 
 	// Cached read access to the Content Addressable Storage. All
 	// workers make use of the same cache, to increase the hit rate.
-	contentAddressableStorageReader := cas.NewDirectoryCachingContentAddressableStorage(
-		cas.NewHardlinkingContentAddressableStorage(
+	contentAddressableStorageReader := cas_re.NewDirectoryCachingContentAddressableStorage(
+		cas_re.NewHardlinkingContentAddressableStorage(
 			cas.NewBlobAccessContentAddressableStorage(
 				bbb_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
@@ -142,7 +143,7 @@ func main() {
 			contentAddressableStorageWriter = blobstore.NewMetricsBlobAccess(
 				contentAddressableStorageWriter,
 				"cas_batched_store")
-			contentAddressableStorage := cas.NewReadWriteDecouplingContentAddressableStorage(
+			contentAddressableStorage := cas_re.NewReadWriteDecouplingContentAddressableStorage(
 				contentAddressableStorageReader,
 				cas.NewBlobAccessContentAddressableStorage(contentAddressableStorageWriter))
 			buildExecutor := builder.NewStorageFlushingBuildExecutor(

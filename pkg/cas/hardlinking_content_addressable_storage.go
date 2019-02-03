@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sync"
 
+	"github.com/buildbarn/bb-storage/pkg/cas"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,7 +29,7 @@ func init() {
 }
 
 type hardlinkingContentAddressableStorage struct {
-	ContentAddressableStorage
+	cas.ContentAddressableStorage
 
 	lock sync.RWMutex
 
@@ -48,7 +49,7 @@ type hardlinkingContentAddressableStorage struct {
 // into the cache. Future calls for the same file will hardlink them from the
 // cache to the target location. This reduces the amount of network traffic
 // needed.
-func NewHardlinkingContentAddressableStorage(base ContentAddressableStorage, digestKeyFormat util.DigestKeyFormat, cacheDirectory filesystem.Directory, maxFiles int, maxSize int64) ContentAddressableStorage {
+func NewHardlinkingContentAddressableStorage(base cas.ContentAddressableStorage, digestKeyFormat util.DigestKeyFormat, cacheDirectory filesystem.Directory, maxFiles int, maxSize int64) cas.ContentAddressableStorage {
 	return &hardlinkingContentAddressableStorage{
 		ContentAddressableStorage: base,
 

@@ -7,8 +7,8 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/failure"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	cas_proto "github.com/buildbarn/bb-storage/pkg/proto/cas"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -177,9 +177,9 @@ func TestCachingBuildExecutorUncachedSuccess(t *testing.T) {
 		},
 	}, false)
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
-	contentAddressableStorage.EXPECT().PutActionFailure(
+	contentAddressableStorage.EXPECT().PutUncachedActionResult(
 		ctx,
-		&failure.ActionFailure{
+		&cas_proto.UncachedActionResult{
 			ActionDigest: &remoteexecution.Digest{
 				Hash:      "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c",
 				SizeBytes: 11,
@@ -211,7 +211,7 @@ func TestCachingBuildExecutorUncachedSuccess(t *testing.T) {
 			ExitCode:  1,
 			StderrRaw: []byte("Compilation failed"),
 		},
-		Message: "Action details (uncached result): https://example.com/actionfailure/freebsd12/1204703084039248092148032948092148032948034924802194802138213222/582/",
+		Message: "Action details (uncached result): https://example.com/uncached_action_result/freebsd12/1204703084039248092148032948092148032948034924802194802138213222/582/",
 	}, executeResponse)
 	require.False(t, mayBeCached)
 }
@@ -233,9 +233,9 @@ func TestCachingBuildExecutorUncachedFailure(t *testing.T) {
 		},
 	}, false)
 	contentAddressableStorage := mock.NewMockContentAddressableStorage(ctrl)
-	contentAddressableStorage.EXPECT().PutActionFailure(
+	contentAddressableStorage.EXPECT().PutUncachedActionResult(
 		ctx,
-		&failure.ActionFailure{
+		&cas_proto.UncachedActionResult{
 			ActionDigest: &remoteexecution.Digest{
 				Hash:      "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c",
 				SizeBytes: 11,

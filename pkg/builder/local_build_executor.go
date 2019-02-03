@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/buildbarn/bb-storage/pkg/cas"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/golang/protobuf/proto"
