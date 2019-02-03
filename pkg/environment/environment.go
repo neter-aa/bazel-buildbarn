@@ -1,8 +1,8 @@
 package environment
 
 import (
-	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
+	"github.com/buildbarn/bb-storage/pkg/filesystem"
 )
 
 // Environment represents a context in which build commands may be

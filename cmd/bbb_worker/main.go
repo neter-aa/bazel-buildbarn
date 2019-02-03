@@ -11,15 +11,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
+	bbb_blobstore "github.com/EdSchouten/bazel-buildbarn/pkg/blobstore"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/ac"
+	"github.com/buildbarn/bb-storage/pkg/blobstore"
+	"github.com/buildbarn/bb-storage/pkg/blobstore/configuration"
+	"github.com/buildbarn/bb-storage/pkg/filesystem"
+	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -82,7 +83,7 @@ func main() {
 	contentAddressableStorageReader := cas.NewDirectoryCachingContentAddressableStorage(
 		cas.NewHardlinkingContentAddressableStorage(
 			cas.NewBlobAccessContentAddressableStorage(
-				blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
+				bbb_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
 	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
@@ -135,8 +136,8 @@ func main() {
 			// Per-worker separate writer of the Content
 			// Addressable Storage that batches writes after
 			// completing the build action.
-			contentAddressableStorageWriter, contentAddressableStorageFlusher := blobstore.NewBatchedStoreBlobAccess(
-				blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
+			contentAddressableStorageWriter, contentAddressableStorageFlusher := bbb_blobstore.NewBatchedStoreBlobAccess(
+				bbb_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
 				util.DigestKeyWithoutInstance, 100)
 			contentAddressableStorageWriter = blobstore.NewMetricsBlobAccess(
 				contentAddressableStorageWriter,

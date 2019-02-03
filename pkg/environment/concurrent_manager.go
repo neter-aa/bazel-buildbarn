@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/util"
 )
 
 type concurrentManager struct {

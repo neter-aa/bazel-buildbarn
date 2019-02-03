@@ -17,9 +17,9 @@ go_library(
     importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/environment",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/filesystem:go_default_library",
         "//pkg/proto/runner:go_default_library",
-        "//pkg/util:go_default_library",
+        "@com_github_buildbarn_bb_storage//pkg/filesystem:go_default_library",
+        "@com_github_buildbarn_bb_storage//pkg/util:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
@@ -36,8 +36,8 @@ go_test(
     deps = [
         "//pkg/mock:go_default_library",
         "//pkg/proto/runner:go_default_library",
-        "//pkg/util:go_default_library",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
+        "@com_github_buildbarn_bb_storage//pkg/util:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",

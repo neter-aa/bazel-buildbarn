@@ -1,7 +1,7 @@
 package environment
 
 import (
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/util"
 )
 
 type singletonManager struct {

@@ -5,7 +5,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/blobstore"
+	"github.com/buildbarn/bb-storage/pkg/util"
 )
 
 type pendingPutOperation struct {
@@ -15,7 +16,7 @@ type pendingPutOperation struct {
 }
 
 type batchedStoreBlobAccess struct {
-	BlobAccess
+	blobstore.BlobAccess
 	blobKeyFormat util.DigestKeyFormat
 	batchSize     int
 
@@ -31,7 +32,7 @@ type batchedStoreBlobAccess struct {
 //
 // This adapter may be used by the worker to speed up the uploading
 // phase of actions.
-func NewBatchedStoreBlobAccess(blobAccess BlobAccess, blobKeyFormat util.DigestKeyFormat, batchSize int) (BlobAccess, func(ctx context.Context) error) {
+func NewBatchedStoreBlobAccess(blobAccess blobstore.BlobAccess, blobKeyFormat util.DigestKeyFormat, batchSize int) (blobstore.BlobAccess, func(ctx context.Context) error) {
 	ba := &batchedStoreBlobAccess{
 		BlobAccess:           blobAccess,
 		blobKeyFormat:        blobKeyFormat,

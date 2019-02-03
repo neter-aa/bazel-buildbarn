@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/filesystem"
 
 	"google.golang.org/grpc"
 )

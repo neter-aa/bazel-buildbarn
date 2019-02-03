@@ -1,8 +1,8 @@
 package environment
 
 import (
-	"github.com/EdSchouten/bazel-buildbarn/pkg/filesystem"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/filesystem"
+	"github.com/buildbarn/bb-storage/pkg/util"
 
 	"google.golang.org/grpc/codes"
 )

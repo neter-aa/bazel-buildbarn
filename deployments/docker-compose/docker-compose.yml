@@ -11,8 +11,8 @@ services:
     volumes:
     - ./config-browser-frontend-worker:/config
 
-  bbb-storage-0:
-    image: bazel/cmd/bbb_storage:bbb_storage_container
+  bb-storage-0:
+    image: bazel/cmd/bb_storage:bb_storage_container
     expose:
     - 8982
     ports:
@@ -21,8 +21,8 @@ services:
     - ./config-storage:/config
     - ./storage-ac-0:/storage-ac
     - ./storage-cas-0:/storage-cas
-  bbb-storage-1:
-    image: bazel/cmd/bbb_storage:bbb_storage_container
+  bb-storage-1:
+    image: bazel/cmd/bb_storage:bb_storage_container
     expose:
     - 8982
     ports:

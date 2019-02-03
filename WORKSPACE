@@ -243,3 +243,9 @@ go_repository(
     commit = "ce511d4823dd074d7c37a74225320332d6961abb",
     importpath = "github.com/lazybeaver/xorshift",
 )
+
+go_repository(
+    name = "com_github_buildbarn_bb_storage",
+    commit = "dfb8c06f0dda1d945284616c75ed4b3706906b8b",
+    importpath = "github.com/buildbarn/bb-storage",
+)

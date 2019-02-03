@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
+	"github.com/buildbarn/bb-storage/pkg/blobstore"
+	"github.com/buildbarn/bb-storage/pkg/util"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -13,14 +14,14 @@ import (
 )
 
 type existencePreconditionBlobAccess struct {
-	BlobAccess
+	blobstore.BlobAccess
 }
 
 // NewExistencePreconditionBlobAccess wraps a BlobAccess into a version
 // that returns GRPC status code "FAILED_PRECONDITION" instead of
 // "NOT_FOUND" for Get() operations. This is used by worker processes to
 // make Execution::Execute() comply to the protocol.
-func NewExistencePreconditionBlobAccess(blobAccess BlobAccess) BlobAccess {
+func NewExistencePreconditionBlobAccess(blobAccess blobstore.BlobAccess) blobstore.BlobAccess {
 	return &existencePreconditionBlobAccess{
 		BlobAccess: blobAccess,
 	}

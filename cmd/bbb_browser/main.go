@@ -9,9 +9,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/ac"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/blobstore/configuration"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/cas"
+	"github.com/buildbarn/bb-storage/pkg/ac"
+	"github.com/buildbarn/bb-storage/pkg/blobstore/configuration"
 	"github.com/gorilla/mux"
 	"github.com/kballard/go-shellquote"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
