@@ -137,14 +137,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_satori_go_uuid",
-    importpath = "github.com/satori/go.uuid",
-    sha256 = "6f9d9549958252d7c5a5ed1cabeedeaab7a600ca0b888a3666cce4c3590aa5a7",
-    strip_prefix = "go.uuid-1.2.0",
-    urls = ["https://github.com/satori/go.uuid/archive/v1.2.0.tar.gz"],
-)
-
-go_repository(
     name = "org_golang_google_genproto",
     commit = "e92b116572682a5b432ddd840aeaba2a559eeff1",
     importpath = "google.golang.org/genproto",

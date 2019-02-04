@@ -11,7 +11,7 @@ import (
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/grpc/codes"
@@ -177,7 +177,7 @@ func (bq *workerBuildQueue) Execute(in *remoteexecution.ExecuteRequest, out remo
 		}
 
 		job = &workerBuildJob{
-			name:                    uuid.NewV4().String(),
+			name:                    uuid.Must(uuid.NewRandom()).String(),
 			actionDigest:            in.ActionDigest,
 			deduplicationKey:        deduplicationKey,
 			executeRequest:          *in,
