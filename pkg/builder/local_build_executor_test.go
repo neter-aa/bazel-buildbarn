@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/internal/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"

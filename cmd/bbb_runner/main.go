@@ -8,8 +8,8 @@ import (
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/util"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
+	"github.com/buildbarn/bb-storage/pkg/util"
 
 	"google.golang.org/grpc"
 )

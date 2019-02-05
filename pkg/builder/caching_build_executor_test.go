@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/EdSchouten/bazel-buildbarn/internal/mock"
 	"github.com/EdSchouten/bazel-buildbarn/pkg/builder"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/mock"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	cas_proto "github.com/buildbarn/bb-storage/pkg/proto/cas"
 	"github.com/buildbarn/bb-storage/pkg/util"

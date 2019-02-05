@@ -22,11 +22,7 @@ gomock(
 gomock(
     name = "builder",
     out = "builder.go",
-    interfaces = [
-        "BuildExecutor",
-        "BuildQueue",
-        "BuildQueueGetter",
-    ],
+    interfaces = ["BuildExecutor"],
     library = "//pkg/builder:go_default_library",
     package = "mock",
 )
@@ -84,6 +80,17 @@ gomock(
     package = "mock",
 )
 
+gomock(
+    name = "storage_builder",
+    out = "storage_builder.go",
+    interfaces = [
+        "BuildQueue",
+        "BuildQueueGetter",
+    ],
+    library = "@com_github_buildbarn_bb_storage//pkg/builder:go_default_library",
+    package = "mock",
+)
+
 go_library(
     name = "go_default_library",
     srcs = [
@@ -95,15 +102,17 @@ go_library(
         ":filesystem.go",
         ":remoteexecution.go",
         ":sharding.go",
+        ":storage_builder.go",
     ],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/mock",
-    visibility = ["//visibility:public"],
+    importpath = "github.com/EdSchouten/bazel-buildbarn/internal/mock",
+    visibility = ["//:__subpackages__"],
     deps = [
         "//pkg/builder:go_default_library",
         "//pkg/environment:go_default_library",
         "//pkg/proto/runner:go_default_library",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
         "@com_github_buildbarn_bb_storage//pkg/blobstore/sharding:go_default_library",
+        "@com_github_buildbarn_bb_storage//pkg/builder:go_default_library",
         "@com_github_buildbarn_bb_storage//pkg/filesystem:go_default_library",
         "@com_github_buildbarn_bb_storage//pkg/proto/cas:go_default_library",
         "@com_github_buildbarn_bb_storage//pkg/util:go_default_library",

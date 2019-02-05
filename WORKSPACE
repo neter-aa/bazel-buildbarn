@@ -48,7 +48,7 @@ git_repository(
 
 git_repository(
     name = "com_github_buildbarn_bb_storage",
-    commit = "91e95ab36b90259bea60e5b525182694e7450349",
+    commit = "da973567871620b4996a1caa18104057ddd94828",
     remote = "git@github.com:buildbarn/bb-storage.git",
 )
 

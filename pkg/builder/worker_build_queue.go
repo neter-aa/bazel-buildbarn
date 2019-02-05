@@ -10,6 +10,7 @@ import (
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	"github.com/buildbarn/bb-storage/pkg/builder"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
@@ -121,7 +122,7 @@ type workerBuildQueue struct {
 // NewWorkerBuildQueue creates an execution server that places execution
 // requests in a queue. These execution requests may be extracted by
 // workers.
-func NewWorkerBuildQueue(deduplicationKeyFormat util.DigestKeyFormat, jobsPendingMax uint) (BuildQueue, scheduler.SchedulerServer) {
+func NewWorkerBuildQueue(deduplicationKeyFormat util.DigestKeyFormat, jobsPendingMax uint) (builder.BuildQueue, scheduler.SchedulerServer) {
 	bq := &workerBuildQueue{
 		deduplicationKeyFormat: deduplicationKeyFormat,
 		jobsPendingMax:         jobsPendingMax,
