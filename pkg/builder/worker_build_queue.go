@@ -143,7 +143,7 @@ func (bq *workerBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecu
 				remoteexecution.DigestFunction_SHA256,
 			},
 			ActionCacheUpdateCapabilities: &remoteexecution.ActionCacheUpdateCapabilities{
-				// TODO(edsch): Let bbb-frontend flip this to true when enabled?
+				// TODO(edsch): Let the frontend flip this to true when enabled?
 				UpdateEnabled: false,
 			},
 			// CachePriorityCapabilities: Priorities not supported.
