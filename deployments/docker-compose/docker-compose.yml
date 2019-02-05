@@ -1,7 +1,7 @@
 version: '3'
 services:
-  bbb-frontend:
-    image: bazel/cmd/bbb_frontend:bbb_frontend_container
+  bb-frontend:
+    image: bazel/cmd/bb_storage:bb_storage_container
     command:
     - -scheduler=debian8|bbb-scheduler-debian8:8981
     - -scheduler=ubuntu16-04|bbb-scheduler-ubuntu16-04:8981
@@ -13,8 +13,10 @@ services:
 
   bb-storage-0:
     image: bazel/cmd/bb_storage:bb_storage_container
+    command:
+    - -ac-allow-updates
     expose:
-    - 8982
+    - 8980
     ports:
     - 7982:80
     volumes:
@@ -23,8 +25,10 @@ services:
     - ./storage-cas-0:/storage-cas
   bb-storage-1:
     image: bazel/cmd/bb_storage:bb_storage_container
+    command:
+    - -ac-allow-updates
     expose:
-    - 8982
+    - 8980
     ports:
     - 17982:80
     volumes:

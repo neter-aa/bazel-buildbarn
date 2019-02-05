@@ -56,7 +56,7 @@
 
 set -eux
 
-for component in frontend scheduler worker; do
+for component in scheduler worker; do
   bazel run "//cmd/bbb_${component}:bbb_${component}_container"
 done
 bazel run "//cmd/bbb_runner:bbb_runner_debian8_container"
