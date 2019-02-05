@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"context"
 	"log"
+	"math"
 	"sync"
 
 	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/scheduler"
@@ -151,7 +152,11 @@ func (bq *workerBuildQueue) GetCapabilities(ctx context.Context, in *remoteexecu
 		ExecutionCapabilities: &remoteexecution.ExecutionCapabilities{
 			DigestFunction: remoteexecution.DigestFunction_SHA256,
 			ExecEnabled:    true,
-			// ExecutionPriorityCapabilities: Priorities not supported.
+			ExecutionPriorityCapabilities: &remoteexecution.PriorityCapabilities{
+				Priorities: []*remoteexecution.PriorityCapabilities_PriorityRange{
+					{MinPriority: math.MinInt32, MaxPriority: math.MaxInt32},
+				},
+			},
 		},
 		// TODO(edsch): DeprecatedApiVersion.
 		LowApiVersion:  &semver.SemVer{Major: 2},
