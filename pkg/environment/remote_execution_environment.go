@@ -3,7 +3,7 @@ package environment
 import (
 	"context"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
+	"github.com/buildbarn/bb-remote-execution/pkg/proto/runner"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
 
 	"google.golang.org/grpc"

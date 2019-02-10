@@ -104,7 +104,7 @@ go_library(
         ":sharding.go",
         ":storage_builder.go",
     ],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/internal/mock",
+    importpath = "github.com/buildbarn/bb-remote-execution/internal/mock",
     visibility = ["//:__subpackages__"],
     deps = [
         "//pkg/builder:go_default_library",

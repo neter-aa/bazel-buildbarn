@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package buildbarn.runner;
 
-option go_package = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner";
+option go_package = "github.com/buildbarn/bb-remote-execution/pkg/proto/runner";
 
 // In order to make the execution strategy of bbb_worker pluggable and
 // capable of supporting privilege separation, bbb_worker calls into a

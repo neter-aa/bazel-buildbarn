@@ -9,7 +9,7 @@ go_library(
         "storage_flushing_build_executor.go",
         "worker_build_queue.go",
     ],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/builder",
+    importpath = "github.com/buildbarn/bb-remote-execution/pkg/builder",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/environment:go_default_library",

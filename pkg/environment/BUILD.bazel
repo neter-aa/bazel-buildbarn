@@ -14,7 +14,7 @@ go_library(
         "singleton_manager.go",
         "temp_directory_cleaning_manager.go",
     ],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/environment",
+    importpath = "github.com/buildbarn/bb-remote-execution/pkg/environment",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/proto/runner:go_default_library",

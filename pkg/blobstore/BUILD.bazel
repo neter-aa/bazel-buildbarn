@@ -6,7 +6,7 @@ go_library(
         "batched_store_blob_access.go",
         "existence_precondition_blob_access.go",
     ],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/blobstore",
+    importpath = "github.com/buildbarn/bb-remote-execution/pkg/blobstore",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_buildbarn_bb_storage//pkg/blobstore:go_default_library",

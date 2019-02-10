@@ -5,7 +5,7 @@ import (
 	"log"
 	"path"
 
-	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
+	"github.com/buildbarn/bb-remote-execution/pkg/proto/runner"
 	"github.com/buildbarn/bb-storage/pkg/filesystem"
 	"github.com/buildbarn/bb-storage/pkg/util"
 

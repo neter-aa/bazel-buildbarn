@@ -36,7 +36,7 @@ like. In this diagram, the arrows represent the direction in which
 network connections are established.
 
 <p align="center">
-  <img src="https://github.com/EdSchouten/bazel-buildbarn/raw/master/doc/diagrams/bbb-overview.png" alt="Overview of a typical Bazel Buildbarn deployment"/>
+  <img src="https://github.com/buildbarn/bb-remote-execution/raw/master/doc/diagrams/bbb-overview.png" alt="Overview of a typical Bazel Buildbarn deployment"/>
 </p>
 
 One common use case for this implementation is to be run in Docker
@@ -50,7 +50,7 @@ while the build action is started by a helper process called
 directory cannot be written to by the latter.
 
 It is possible to hook into `bbb_worker`'s execution process by
-writing your own runner process [that implements the GRPC protocol](https://github.com/EdSchouten/bazel-buildbarn/blob/master/pkg/proto/runner/runner.proto).
+writing your own runner process [that implements the GRPC protocol](https://github.com/buildbarn/bb-remote-execution/blob/master/pkg/proto/runner/runner.proto).
 Such a runner process could for example invoke commands using a CPU
 emulator.
 
@@ -140,7 +140,7 @@ the command below:
 
 ## Bazel Buildbarn as a library
 
-[![GoDoc](https://godoc.org/github.com/EdSchouten/bazel-buildbarn?status.svg)](https://godoc.org/github.com/EdSchouten/bazel-buildbarn)
+[![GoDoc](https://godoc.org/github.com/buildbarn/bb-remote-execution?status.svg)](https://godoc.org/github.com/buildbarn/bb-remote-execution)
 
 Internally, Bazel Buildbarn consists of a large set of small classes
 with isolated logic. Even if Bazel Buildbarn is not a perfect fit for

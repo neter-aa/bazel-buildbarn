@@ -10,7 +10,7 @@ proto_library(
 go_proto_library(
     name = "runner_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner",
+    importpath = "github.com/buildbarn/bb-remote-execution/pkg/proto/runner",
     proto = ":runner_proto",
     visibility = ["//visibility:public"],
 )
@@ -18,6 +18,6 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     embed = [":runner_go_proto"],
-    importpath = "github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner",
+    importpath = "github.com/buildbarn/bb-remote-execution/pkg/proto/runner",
     visibility = ["//visibility:public"],
 )

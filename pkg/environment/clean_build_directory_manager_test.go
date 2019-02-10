@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/EdSchouten/bazel-buildbarn/internal/mock"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/environment"
-	"github.com/EdSchouten/bazel-buildbarn/pkg/proto/runner"
+	"github.com/buildbarn/bb-remote-execution/internal/mock"
+	"github.com/buildbarn/bb-remote-execution/pkg/environment"
+	"github.com/buildbarn/bb-remote-execution/pkg/proto/runner"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/golang/mock/gomock"
