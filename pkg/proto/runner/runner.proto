@@ -4,15 +4,15 @@ package buildbarn.runner;
 
 option go_package = "github.com/buildbarn/bb-remote-execution/pkg/proto/runner";
 
-// In order to make the execution strategy of bbb_worker pluggable and
-// capable of supporting privilege separation, bbb_worker calls into a
+// In order to make the execution strategy of bb_worker pluggable and
+// capable of supporting privilege separation, bb_worker calls into a
 // runner service to invoke the desired command after setting up inputs
 // accordingly. This service needs to be implemented by the runner.
 //
-// Using separate runner processes also prevents bbb_worker from
+// Using separate runner processes also prevents bb_worker from
 // forking. This is good, as UNIX systems (without native support for
 // spawning processes without forking) have an inherent race condition
-// that effectively prevents bbb_worker from both writing executables to
+// that effectively prevents bb_worker from both writing executables to
 // disk and executing them. More details:
 //
 //     https://github.com/golang/go/issues/22315

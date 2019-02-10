@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	bbb_blobstore "github.com/buildbarn/bb-remote-execution/pkg/blobstore"
+	re_blobstore "github.com/buildbarn/bb-remote-execution/pkg/blobstore"
 	"github.com/buildbarn/bb-remote-execution/pkg/builder"
 	cas_re "github.com/buildbarn/bb-remote-execution/pkg/cas"
 	"github.com/buildbarn/bb-remote-execution/pkg/environment"
@@ -84,7 +84,7 @@ func main() {
 	contentAddressableStorageReader := cas_re.NewDirectoryCachingContentAddressableStorage(
 		cas_re.NewHardlinkingContentAddressableStorage(
 			cas.NewBlobAccessContentAddressableStorage(
-				bbb_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
+				re_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess)),
 			util.DigestKeyWithoutInstance, cacheDirectory, 10000, 1<<30),
 		util.DigestKeyWithoutInstance, 1000)
 	actionCache := ac.NewBlobAccessActionCache(actionCacheBlobAccess)
@@ -137,8 +137,8 @@ func main() {
 			// Per-worker separate writer of the Content
 			// Addressable Storage that batches writes after
 			// completing the build action.
-			contentAddressableStorageWriter, contentAddressableStorageFlusher := bbb_blobstore.NewBatchedStoreBlobAccess(
-				bbb_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
+			contentAddressableStorageWriter, contentAddressableStorageFlusher := re_blobstore.NewBatchedStoreBlobAccess(
+				re_blobstore.NewExistencePreconditionBlobAccess(contentAddressableStorageBlobAccess),
 				util.DigestKeyWithoutInstance, 100)
 			contentAddressableStorageWriter = blobstore.NewMetricsBlobAccess(
 				contentAddressableStorageWriter,

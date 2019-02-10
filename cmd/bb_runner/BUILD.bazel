@@ -5,7 +5,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/buildbarn/bb-remote-execution/cmd/bbb_runner",
+    importpath = "github.com/buildbarn/bb-remote-execution/cmd/bb_runner",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/environment:go_default_library",
@@ -17,15 +17,15 @@ go_library(
 )
 
 go_binary(
-    name = "bbb_runner",
+    name = "bb_runner",
     embed = [":go_default_library"],
     pure = "on",
     visibility = ["//visibility:public"],
 )
 
 container_layer(
-    name = "bbb_runner_layer",
-    files = [":bbb_runner"],
+    name = "bb_runner_layer",
+    files = [":bb_runner"],
 )
 
 container_layer(
@@ -35,16 +35,16 @@ container_layer(
 )
 
 container_image(
-    name = "bbb_runner_debian8_container",
+    name = "bb_runner_debian8_container",
     base = "@rbe_debian8_base//image",
     cmd = [
         "-temp-directory=/run/lock",
         "-temp-directory=/tmp",
         "-temp-directory=/var/tmp",
     ],
-    entrypoint = ["/bbb_runner"],
+    entrypoint = ["/bb_runner"],
     layers = [
-        ":bbb_runner_layer",
+        ":bb_runner_layer",
         ":passwd_layer",
     ],
     user = "build",
@@ -52,22 +52,22 @@ container_image(
 )
 
 container_push_official(
-    name = "bbb_runner_debian8_container_push",
-    component = "bbb-runner-debian8",
-    image = ":bbb_runner_debian8_container",
+    name = "bb_runner_debian8_container_push",
+    component = "bb-runner-debian8",
+    image = ":bb_runner_debian8_container",
 )
 
 container_image(
-    name = "bbb_runner_ubuntu16_04_container",
+    name = "bb_runner_ubuntu16_04_container",
     base = "@rbe_ubuntu16_04_base//image",
     cmd = [
         "-temp-directory=/run/lock",
         "-temp-directory=/tmp",
         "-temp-directory=/var/tmp",
     ],
-    entrypoint = ["/bbb_runner"],
+    entrypoint = ["/bb_runner"],
     layers = [
-        ":bbb_runner_layer",
+        ":bb_runner_layer",
         ":passwd_layer",
     ],
     user = "build",
@@ -75,7 +75,7 @@ container_image(
 )
 
 container_push_official(
-    name = "bbb_runner_ubuntu16_04_container_push",
-    component = "bbb-runner-ubuntu16-04",
-    image = ":bbb_runner_ubuntu16_04_container",
+    name = "bb_runner_ubuntu16_04_container_push",
+    component = "bb-runner-ubuntu16-04",
+    image = ":bb_runner_ubuntu16_04_container",
 )

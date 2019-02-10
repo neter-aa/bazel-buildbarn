@@ -5,19 +5,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/buildbarn/bb-remote-execution/cmd/bbb_worker",
+    importpath = "github.com/buildbarn/bb-remote-execution/cmd/bb_scheduler",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/blobstore:go_default_library",
         "//pkg/builder:go_default_library",
-        "//pkg/cas:go_default_library",
-        "//pkg/environment:go_default_library",
         "//pkg/proto/scheduler:go_default_library",
-        "@com_github_buildbarn_bb_storage//pkg/ac:go_default_library",
-        "@com_github_buildbarn_bb_storage//pkg/blobstore:go_default_library",
-        "@com_github_buildbarn_bb_storage//pkg/blobstore/configuration:go_default_library",
-        "@com_github_buildbarn_bb_storage//pkg/cas:go_default_library",
-        "@com_github_buildbarn_bb_storage//pkg/filesystem:go_default_library",
+        "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:go_default_library",
         "@com_github_buildbarn_bb_storage//pkg/util:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promhttp:go_default_library",
@@ -26,21 +19,21 @@ go_library(
 )
 
 go_binary(
-    name = "bbb_worker",
+    name = "bb_scheduler",
     embed = [":go_default_library"],
     pure = "on",
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
 
 container_image(
-    name = "bbb_worker_container",
-    entrypoint = ["/bbb_worker"],
-    files = [":bbb_worker"],
+    name = "bb_scheduler_container",
+    entrypoint = ["/bb_scheduler"],
+    files = [":bb_scheduler"],
     visibility = ["//visibility:public"],
 )
 
 container_push_official(
-    name = "bbb_worker_container_push",
-    component = "bbb-worker",
-    image = ":bbb_worker_container",
+    name = "bb_scheduler_container_push",
+    component = "bb-scheduler",
+    image = ":bb_scheduler_container",
 )

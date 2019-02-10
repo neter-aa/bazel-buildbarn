@@ -7,9 +7,9 @@ import (
 	"math"
 	"sync"
 
-	"github.com/buildbarn/bb-remote-execution/pkg/proto/scheduler"
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
+	"github.com/buildbarn/bb-remote-execution/pkg/proto/scheduler"
 	"github.com/buildbarn/bb-storage/pkg/builder"
 	"github.com/buildbarn/bb-storage/pkg/util"
 	"github.com/golang/protobuf/ptypes"
