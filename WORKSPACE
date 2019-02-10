@@ -42,14 +42,14 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "com_github_buildbarn_bb_browser",
-    commit = "8ddc5018d629c943c84249a5d8145622a81adf98",
-    remote = "git@github.com:buildbarn/bb-browser.git",
+    commit = "d28c09d2f146d2b3ad95a4aeef69f686d2512e8f",
+    remote = "https://github.com/buildbarn/bb-browser.git",
 )
 
 git_repository(
     name = "com_github_buildbarn_bb_storage",
-    commit = "da973567871620b4996a1caa18104057ddd94828",
-    remote = "git@github.com:buildbarn/bb-storage.git",
+    commit = "e4d94e6d015f10a9fbb4d1f936e8392e76408449",
+    remote = "https://github.com/buildbarn/bb-storage.git",
 )
 
 load("@io_bazel_rules_docker//repositories:repositories.bzl", container_repositories = "repositories")
