@@ -1,3 +1,13 @@
+# NOTICE: This project has been archived!
+
+The Bazel Buildbarn project is being renamed to just Buildbarn. The
+reason for this is that build related projects outside the Bazel
+ecosystem (e.g., BuildStream, recc) are interested in using it as well,
+either as a whole or partially.
+[Buildbarn now has a separate project on GitHub.](https://github.com/buildbarn)
+
+This repository has been left online for historical purposes.
+
 # Bazel Buildbarn
 
 Bazel Buildbarn is an implementation of a Bazel
